@@ -502,3 +502,19 @@ repo in a temp folder.
 
 Everything else (`f65.swift`, `wired.swift`, `app/**`, `README.md`, `backups/`, the probe/diff captures and the compiled
 binaries) is the existing backend, written in other sessions. Treat it as the reference implementation.
+
+## Implementation corrections (Codex)
+
+- The approximate 70 reports/s limit in §8 conflicts with the existing 20 fps receiver wave
+  (about 200 reports/s) and README. The integrated service will conservatively budget receiver
+  frames to 70 reports/s while retaining 2 ms packet gaps and 0.4 s keep-alives. Cable stays at
+  20 fps. This is a deliberate change from the old wave rate, pending hardware validation.
+- The logical settings write allow-list is 01/04/09. Cable translation necessarily uses
+  03/04/0A on the wire; those are the same confirmed blocks, not additional write features.
+  Existing transient live frames remain a separate streaming API (cable 08 / receiver 88),
+  as required by the Live lighting section; they do not save keyboard settings.
+- Rollback verification checks every stable byte (excluding documented volatile LED 0x0e),
+  rather than only edited bytes: a partially failed transfer could affect other bytes.
+- Battery 4A has no confirmed cable mapping, so the cable UI shows unavailable/unconfirmed.
+- The repository's initial probe1.txt contains incomplete old reads. It is diagnostic evidence,
+  not a valid snapshot fixture. Restore files are parsed strictly and never zero-filled.
