@@ -1,25 +1,54 @@
-# F65 Lighting (menu-bar app)
+# F65 Lighting (Mac app + menu bar)
 
-A small native macOS menu-bar app (Swift + AppKit, no dependencies, no Xcode project) that keeps
-live per-key lighting running on an AULA F65. The F65 can't store per-key colours, so the app
-streams a frame to it 20 times a second. About a second after the app stops (Off, Pause, Quit, or
-the Mac/display going to sleep), the keyboard goes back to its own saved effect. Nothing is
-written to the keyboard's memory.
+A native macOS app (SwiftPM, SwiftUI + AppKit, no Xcode project) for the AULA F65. It does two
+separate things:
 
-## Build
+- **Onboard settings, saved on the keyboard**: effect, per-effect brightness / speed / colour, the
+  7-colour palette, and both key layers (base and Fn). These keep working with the app closed.
+  Every save goes backup → write → read back and verify → retry → verified rollback, using only
+  write commands 01 (keys), 04 (lighting) and 09 (palette).
+- **Live lighting, streamed by the app**: Solid, Rainbow wave or a custom `layout.json`, 20 frames a
+  second. Nothing is stored; about a second after streaming stops the keyboard shows its saved
+  effect again.
 
-Requires only the Xcode Command Line Tools (`swiftc`, `codesign`), macOS 13 or later.
+## Build and test
+
+Requires Xcode (Swift 6.4 toolchain), macOS 13 or later.
 
 ```bash
 cd app
+swift test            # F65Kit unit tests (packets, retries, rollback, blocks, backups, key map)
 ./build.sh            # release build → app/F65 Lighting.app (ad-hoc signed)
-./build.sh debug      # unoptimised build with debug info
 open "F65 Lighting.app"
 ```
 
-The build compiles `Sources/*.swift` with `swiftc`, assembles the bundle with `Info.plist`
-(`LSUIElement` = true, bundle id `local.f65.lighting`) and signs it with `codesign -s - --force --deep`.
-You can move the `.app` to `/Applications` if you like.
+`build.sh` runs `swift build`, assembles the bundle in `.build/` with `Info.plist` and
+`Resources/keyboard/` (the offline 3D/flat keyboard view), signs it, and only then replaces
+`F65 Lighting.app`. Bundle id `local.f65.lighting`, executable `F65Lighting`.
+
+Without hardware, run against the in-memory mock keyboard (no HID device is opened):
+
+```bash
+F65_MOCK=1 "app/F65 Lighting.app/Contents/MacOS/F65Lighting"               # explore every screen
+F65_MOCK=1 F65_SMOKE=1 "app/F65 Lighting.app/Contents/MacOS/F65Lighting"   # scripted check, quits when done
+```
+
+## Main window
+
+Open it from the menu-bar icon → **Open F65…** (⌘O). The Dock icon shows only while the window is
+open. A launch at login stays menu-bar only.
+
+| Section | What it does |
+|---|---|
+| Lighting | Keyboard view, effect grid (hover previews in the app only, click saves), brightness / speed / colour for the current effect, palette editor with Reset to factory |
+| Live lighting | Off / Solid / Rainbow wave / Custom layout, brightness %, pause, connection preference |
+| Keys | Base / Fn layer, click a key (or pick it from the list) to see its binding and remap, disable or restore it. Fn and connection bindings ask for confirmation first |
+| Macros | Read-only. Shows whether macro memory is empty |
+| Restore points | Every save makes one first. Back up now, Import… (the CLI's `backups/*.txt` work), Reveal, Restore… |
+| Settings | Keyboard view: 3D model or Flat (Flat lay / Glass / Outline), camera, colourway. Start at login |
+
+Unconfirmed values are labelled in the UI: speed direction (0–4) and the battery estimate from `4A`.
+Effect previews are approximations drawn in the app.
 
 ## Using it
 
@@ -77,8 +106,9 @@ new function. If no map can be read, a built-in copy of the factory map is used.
 - **2.4G receiver** (3554:FA09): up to six 20-byte output reports per frame, colours grouped and
   quantised to fit. **Live frames only show while the keyboard's saved effect is "Fixed on"**; the
   app doesn't change that for you (set it with the Fn shortcuts or `./f65 led effect fixed` over
-  the cable). The app sends nothing over the receiver except live frames: it never reads or
-  writes settings through it. This path hasn't been confirmed on the F65 yet.
+  the cable). Settings reads and writes over the receiver go packet by packet, each write
+  packet acknowledged; the cable is recommended for big changes (remaps, palette, restores).
+  Live streaming pauses during every settings read or write.
 
 Plugging and unplugging is handled automatically. If the keyboard stops answering (asleep, mode
 switch), the app quietly retries every ~2 s. It also stops streaming while the Mac or the display
@@ -111,14 +141,19 @@ at a time; a second copy quits immediately.
 
 | File | Contents |
 |---|---|
-| `Sources/main.swift` | App entry point (accessory app, no Dock icon) |
-| `Sources/AppDelegate.swift` | Menu-bar UI, settings, colour panel, layout file handling, login item |
-| `Sources/Engine.swift` | IOHIDManager matching/removal, device open/retry, 20 fps frame loop, effects |
-| `Sources/Protocol.swift` | Cable frame and 2.4G report encoders |
-| `Sources/KeyMap.swift` | Key names → slots, built-in fallback map, key-map cache |
-| `Sources/Layout.swift` | `layout.json` parsing |
-| `Sources/Colors.swift` | Colour parsing, hue, scaling |
-| `Info.plist`, `build.sh` | Bundle metadata and build script |
+| `Sources/F65Kit/DeviceService.swift` | Owns the HID hub, live frame timer and every settings transaction (pauses streaming, backs up, saves, reloads) |
+| `Sources/F65Kit/HIDHub.swift` | IOHIDManager matching/removal, input-report inbox on its own queue so acks arrive during a write |
+| `Sources/F65Kit/Transport.swift` | Cable and 2.4G settings transports (read reassembly, per-packet acks and resends) |
+| `Sources/F65Kit/Blocks.swift` | Lighting block, palette, key layers, snapshot, physical key ↔ slot table |
+| `Sources/F65Kit/BackupStore.swift` | Restore-point files and `safeSave` (port of `f65.swift` `save()`) |
+| `Sources/F65Kit/MockTransport.swift` | In-memory keyboard and packet-level fault injection for tests and `F65_MOCK=1` |
+| `Sources/F65Kit/Protocol.swift`, `Engine.swift`, `KeyMap.swift`, `Layout.swift`, `Colors.swift`, `KeyNames.swift` | Live-frame encoders and renderer, key map, `layout.json`, colours, key names |
+| `Sources/F65Lighting/AppDelegate.swift` | Menu-bar menu, settings, login item, window opening |
+| `Sources/F65Lighting/MainWindow.swift`, `LightingView.swift`, `KeysView.swift`, `DeviceViews.swift` | Main window and its sections |
+| `Sources/F65Lighting/KeyboardView.swift`, `Resources/keyboard/` | WKWebView keyboard (three.js r147 vendored, offline) and its JS bridge |
+| `Sources/F65Lighting/SmokeTest.swift` | Mock-only scripted check (`F65_SMOKE=1`) |
+| `Tests/F65KitTests/` | Unit tests |
+| `Package.swift`, `Info.plist`, `build.sh` | Package, bundle metadata, build script |
 
 ## 2.4G receiver notes (tested on the F65)
 - Reports of a frame go out 2 ms apart: back to back, the receiver drops some and keys stall, then jump.

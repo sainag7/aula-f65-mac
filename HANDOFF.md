@@ -518,3 +518,16 @@ binaries) is the existing backend, written in other sessions. Treat it as the re
 - Battery 4A has no confirmed cable mapping, so the cable UI shows unavailable/unconfirmed.
 - The repository's initial probe1.txt contains incomplete old reads. It is diagnostic evidence,
   not a valid snapshot fixture. Restore files are parsed strictly and never zero-filled.
+
+## Completion notes (Claude, after Codex ran out of usage)
+
+- Codex finished milestones 1–9 plus uncommitted hardening (strict change validation in `safeSave`,
+  sanitised restores, input reports via the manager callback, mock smoke harness). Verified and
+  committed as milestone 9b.
+- Milestone 10 added: the 2.4 s wake-prompt pulse while `07` reports asleep (static with Reduce Motion),
+  an outline on palette swatches (the white swatch was invisible), and login-item launches no longer
+  open the main window (§6.2: menu-bar only unless opened).
+- Already present from Codex and kept: remap flip after verify (`verified()` in index.html), Reduce Motion,
+  inactive rendering, WebGL failure → Flat, packet progress with amber resend, permission banner.
+- Correction to §4.3/§7: the existing menu-bar app was running during this work as the old build. Quit it
+  before testing the new bundle; a running old copy would make the new one quit (single-instance guard).

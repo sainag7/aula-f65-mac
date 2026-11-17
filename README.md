@@ -142,10 +142,13 @@ frames may use up to 12 reports — **7-report frames confirmed working on the F
 - Tuning: `F65_FPS`, `F65_GAP` (ms), `F65_DUP` (send each new frame N times), `F65_STEPPED=1` with
   `F65_HUES`/`F65_STEP`; `F65_DEBUG=1` prints frames, bytes, reports and send times per second.
 
-## Menu-bar app — `app/`
-`cd app && ./build.sh`, then `open "app/F65 Lighting.app"`. Solid colour, rainbow wave or a per-key
-layout from `~/Library/Application Support/F65Lighting/layout.json`; picks the cable or the 2.4G
-receiver automatically. See [app/README.md](app/README.md).
+## Mac app — `app/`
+`cd app && swift test && ./build.sh`, then `open "app/F65 Lighting.app"`. A menu-bar app with a main window
+(**Open F65…**, ⌘O) that reads and saves the keyboard's own settings (effect, brightness, speed, colour,
+palette, both key layers, restore points) through the same backup → write → verify → rollback routine as
+`./f65`, and streams live lighting (solid colour, rainbow wave or a per-key `layout.json`). It picks the
+cable or the 2.4G receiver automatically and pauses live frames during every settings read or write.
+`./f65` still refuses to save while the app runs; quit the app to use the CLI. See [app/README.md](app/README.md).
 ```bash
 ./wired effect fixed                       # (cable) switch the saved effect to Fixed first
 ./f65 live test 15
