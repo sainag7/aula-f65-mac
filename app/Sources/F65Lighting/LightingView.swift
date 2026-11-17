@@ -44,7 +44,7 @@ struct LightingView:View {
                 Text("Speed direction unconfirmed").font(.caption).foregroundStyle(.secondary)
                 Text("Colour").font(.headline)
                 LazyVGrid(columns:Array(repeating:GridItem(.flexible()),count:4),spacing:10){ForEach(0..<8,id:\.self){i in
-                    Button {model.edit(.lighting("colour",i))} label:{ZStack{Circle().fill(i<7 ? model.device.snapshot!.palette.colours[i].color:Color.gray);if i==7{Image(systemName:"rainbow").foregroundStyle(.white)};if led.colour(led.effect)==i{Image(systemName:"checkmark.circle.fill").foregroundStyle(.white,.black)}}.frame(width:32,height:32)}.buttonStyle(.plain).accessibilityLabel(i==7 ? "Multicolour":"Palette colour \(i+1)")
+                    Button {model.edit(.lighting("colour",i))} label:{ZStack{Circle().fill(i<7 ? model.device.snapshot!.palette.colours[i].color:Color.gray);Circle().strokeBorder(Color.primary.opacity(0.25),lineWidth:1);if i==7{Image(systemName:"rainbow").foregroundStyle(.white)};if led.colour(led.effect)==i{Image(systemName:"checkmark.circle.fill").foregroundStyle(.white,.black)}}.frame(width:32,height:32)}.buttonStyle(.plain).accessibilityLabel(i==7 ? "Multicolour":"Palette colour \(i+1)")
                 }}
                 Button("Edit palette…"){draft=model.device.snapshot!.palette.colours;editingPalette=true}
             }.disabled(!model.canWrite)

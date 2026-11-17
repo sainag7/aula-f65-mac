@@ -30,6 +30,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: Lifecycle
 
+    private var launchedAtLogin = false
+    func applicationWillFinishLaunching(_ note: Notification) {
+        // A login-item launch stays menu-bar only; a launch from Finder or `open` shows the window.
+        if let e = NSAppleEventManager.shared().currentAppleEvent {
+            launchedAtLogin = e.eventID == kAEOpenApplication
+                && e.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+        }
+    }
+
     func applicationDidFinishLaunching(_ note: Notification) {
         // One instance only: two would fight over the keyboard.
         let me = NSRunningApplication.current
@@ -66,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             MainActor.assumeIsolated { self?.checkLayoutFile() }
         }
         refreshMenu()
-        openMainWindow()
+        if !launchedAtLogin { openMainWindow() }
         if engine.isMock, ProcessInfo.processInfo.environment["F65_SMOKE"] == "1", let window=mainWindow {
             Task { await SmokeTest.run(model:model,window:window) }
         }

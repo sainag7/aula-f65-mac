@@ -17,6 +17,19 @@ import F65Kit
     func windowDidResignKey(_ notification:Notification){model.active=false;model.hover=nil}
     func windowDidChangeOcclusionState(_ notification:Notification){model.active=window?.isKeyWindow==true && window?.occlusionState.contains(.visible)==true}
 }
+// Motion token: 2.4 s ease-in-out outline pulse while 07 reports the keyboard asleep. Static with Reduce Motion.
+struct WakePrompt:View {
+    @Environment(\.accessibilityReduceMotion) var reduced
+    @State var pulse=false
+    var body:some View {
+        Label("Press any key on the F65 to wake it. Settings load as soon as it answers.",systemImage:"keyboard.badge.ellipsis")
+            .padding(14).frame(maxWidth:.infinity,alignment:.leading)
+            .background(Color.accentColor.opacity(0.08),in:RoundedRectangle(cornerRadius:10))
+            .overlay(RoundedRectangle(cornerRadius:10).strokeBorder(Color.accentColor.opacity(reduced ? 0.5:(pulse ? 0.85:0.15)),lineWidth:2))
+            .onAppear{guard !reduced else{return};withAnimation(.easeInOut(duration:1.2).repeatForever(autoreverses:true)){pulse=true}}
+            .accessibilityAddTraits(.updatesFrequently)
+    }
+}
 struct MainView:View {
     @ObservedObject var model:AppModel
     @Environment(\.accessibilityReduceMotion) var reduced
@@ -44,6 +57,7 @@ struct MainView:View {
                 ScrollView {
                     VStack(alignment:.leading,spacing:22) {
                         HStack{Text(model.section).font(.largeTitle.weight(.semibold));Spacer()}
+                        if model.device.link == .receiver && !model.device.online && !model.device.permissionDenied {WakePrompt()}
                         if model.device.permissionDenied {
                             Label("Allow Input Monitoring to access the F65.",systemImage:"hand.raised").foregroundStyle(.orange)
                             Button("Open System Settings"){NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)}
