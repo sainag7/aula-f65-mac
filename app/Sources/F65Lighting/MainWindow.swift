@@ -65,5 +65,8 @@ struct MainView:View {
             }.padding(12)
         }.frame(minWidth:980,minHeight:650)
     }
-    @ViewBuilder var sectionContent:some View {Text("Connecting native controls…").foregroundStyle(.secondary)}
+    @ViewBuilder var sectionContent:some View {
+        KeyboardView(model:model).frame(height:340)
+        Text("Preview is approximate. Speed direction is unconfirmed.").font(.caption).foregroundStyle(.secondary)
+    }
 }
