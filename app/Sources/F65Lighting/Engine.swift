@@ -1,3 +1,4 @@
+import F65Kit
 // HID device handling and the 20 fps frame loop. Everything here runs on one serial queue.
 
 import Foundation
@@ -24,11 +25,6 @@ enum ConnectionPref: String, CaseIterable {
         case .receiver: return "2.4G receiver only"
         }
     }
-}
-
-enum LinkKind: Equatable {
-    case cable, receiver
-    var title: String { self == .cable ? "Cable" : "2.4G" }
 }
 
 struct Settings {

@@ -1,3 +1,4 @@
+import F65Kit
 // Menu-bar UI.
 
 import AppKit

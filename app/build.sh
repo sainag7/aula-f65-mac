@@ -1,26 +1,21 @@
 #!/bin/bash
-# Builds "F65 Lighting.app" next to this script. Needs only the Xcode Command Line Tools (swiftc).
 set -euo pipefail
 cd "$(dirname "$0")"
-
 APP="F65 Lighting.app"
-ARCH="$(uname -m)"
-CONFIG="${1:-release}"   # ./build.sh debug  → unoptimised build
-
-FLAGS=(-target "$ARCH-apple-macos13.0")
-if [ "$CONFIG" = "debug" ]; then FLAGS+=(-Onone -g); else FLAGS+=(-O); fi
-
+CONFIG="${1:-release}"
+case "$CONFIG" in debug|release) ;; *) echo 'Use debug or release' >&2; exit 2;; esac
+swift build -c "$CONFIG" --product F65Lighting
+BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
+# Assemble only after compilation succeeds; never delete a working bundle for a failed build.
+STAGE=".build/F65 Lighting.staging.app"
+rm -rf "$STAGE"
+mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources"
+cp "$BIN_DIR/F65Lighting" "$STAGE/Contents/MacOS/F65Lighting"
+cp Info.plist "$STAGE/Contents/Info.plist"
+printf 'APPL????' > "$STAGE/Contents/PkgInfo"
+if [ -d Resources/keyboard ]; then cp -R Resources/keyboard "$STAGE/Contents/Resources/keyboard"; fi
+codesign -s - --force --deep "$STAGE"
+codesign --verify --deep --strict "$STAGE"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-
-echo "Compiling ($CONFIG, $ARCH)…"
-swiftc "${FLAGS[@]}" -module-name F65Lighting -o "$APP/Contents/MacOS/F65Lighting" Sources/*.swift
-
-cp Info.plist "$APP/Contents/Info.plist"
-printf 'APPL????' > "$APP/Contents/PkgInfo"
-
-echo "Signing (ad-hoc)…"
-codesign -s - --force --deep "$APP"
-
+mv "$STAGE" "$APP"
 echo "Built $(pwd)/$APP"
-echo "Run it with:  open \"$(pwd)/$APP\""
