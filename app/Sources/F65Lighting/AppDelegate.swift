@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let engine = Engine()
     private lazy var model = AppModel(service: engine)
     private var mainWindow: MainWindow?
-    private let defaults = UserDefaults.standard
+    private let defaults = ProcessInfo.processInfo.environment["F65_MOCK"] == "1" ? UserDefaults(suiteName:"local.f65.lighting.mock")! : UserDefaults.standard
     private var settings = F65Kit.Settings()
     private var status = EngineStatus()
 

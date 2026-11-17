@@ -4,6 +4,7 @@ import F65Kit
 import AppKit
 
 MainActor.assumeIsolated {
+    if ProcessInfo.processInfo.environment["F65_MOCK"] == "1" { UserDefaults.standard.addSuite(named:"local.f65.lighting.mock") }
     let app = NSApplication.shared
     let delegate = AppDelegate()
     app.delegate = delegate

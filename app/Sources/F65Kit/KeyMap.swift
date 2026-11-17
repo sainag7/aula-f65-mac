@@ -65,7 +65,7 @@ public struct KeyMap {
     // MARK: Fallback and cache
 
     /// Factory base layer as read from this keyboard on 2026-11-17. Used when the map can't be read
-    /// (the app never reads anything over the 2.4G receiver) and nothing is cached yet.
+    /// and nothing is cached yet. Both transports now share the snapshot map.
     public static let fallback: KeyMap = {
         let hex = "00000029000000290000002b0000003900020000000100000000003a0000001e00000014000000040000001d00080000"
             + "0000003b0000001f0000001a000000160000001b000400000000003c00000020000000080000000700000006000000"
@@ -102,6 +102,8 @@ public struct KeyMap {
 
 public enum AppPaths {
     public static var supportDir: URL {
+        if let path = ProcessInfo.processInfo.environment["F65_DATA_DIR"] { return URL(fileURLWithPath:path) }
+        if ProcessInfo.processInfo.environment["F65_MOCK"] == "1" { return FileManager.default.temporaryDirectory.appendingPathComponent("F65Lighting-Mock") }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
         return base.appendingPathComponent("F65Lighting", isDirectory: true)

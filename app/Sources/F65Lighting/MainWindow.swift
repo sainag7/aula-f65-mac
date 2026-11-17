@@ -68,6 +68,9 @@ struct MainView:View {
     @ViewBuilder var sectionContent:some View {
         if model.section=="Lighting" {LightingView(model:model)}
         else if model.section=="Keys" {KeysView(model:model)}
-        else {KeyboardView(model:model).frame(height:340)}
+        else if model.section=="Live lighting" {LiveLightingView(model:model)}
+        else if model.section=="Restore points" {RestorePointsView(model:model)}
+        else if model.section=="Macros" {MacrosView(model:model)}
+        else {DisplaySettingsView(model:model)}
     }
 }
