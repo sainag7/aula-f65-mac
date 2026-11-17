@@ -1,0 +1,796 @@
+<title>F65 Frontend Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Rubik:wght@500&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column for analysis, wide stage for four switchable mockups, then a motion catalogue. The keyboard itself is the hero. */
+:root{
+  --bg:#ECEEF2; --panel:#F8F9FB; --ink:#1A2030; --muted:#566074; --line:#D3D8E0; --accent:#3552C8; --accent-ink:#fff;
+  --ok:#1F7A4D; --warn:#A05A00; --bad:#B3261E; --chip:#E1E5EC;
+  --case:#232833; --cap:#2E3441; --legend:#E3E7EF;
+  --f-ui:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+  --f-cap:"Rubik","Hanken Grotesk",system-ui,sans-serif;
+  --f-term:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --f-mac:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hanken Grotesk",system-ui,sans-serif;
+  --mac-win:#FBFBFD; --mac-side:#EEF0F4; --mac-bar:#F2F3F6; --mac-line:#DADDE3;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11141A; --panel:#191D25; --ink:#E5E8EE; --muted:#9AA3B5; --line:#2A303B; --accent:#8FA4FF; --accent-ink:#0F1530;
+  --ok:#5BC08A; --warn:#E3A44A; --bad:#F2867D; --chip:#252B36;
+  --mac-win:#1E2129; --mac-side:#242833; --mac-bar:#22262F; --mac-line:#323744; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11141A; --panel:#191D25; --ink:#E5E8EE; --muted:#9AA3B5; --line:#2A303B; --accent:#8FA4FF; --accent-ink:#0F1530;
+  --ok:#5BC08A; --warn:#E3A44A; --bad:#F2867D; --chip:#252B36;
+  --mac-win:#1E2129; --mac-side:#242833; --mac-bar:#22262F; --mac-line:#323744; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:56px}
+.read{max-width:68ch}
+h1,h2,h3{text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2.1rem,5vw,3.4rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.65rem;font-weight:700;letter-spacing:-.01em}
+h3{font-size:1.1rem;font-weight:700}
+p{margin:0}
+.stack{display:grid;gap:14px}
+.muted{color:var(--muted)}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--f-term);font-size:.86em;background:var(--chip);padding:1px 5px;border-radius:4px}
+
+/* ---------- Keyboard ---------- */
+.kb{container-type:inline-size;position:relative;background:var(--case);border-radius:2.2cqw;padding:2.1cqw 2.1cqw 2.4cqw;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 2px rgba(0,0,0,.25),0 14px 30px -12px rgba(0,0,0,.35);max-width:100%}
+.plate{position:relative;aspect-ratio:16/5}
+.k{position:absolute;border-radius:.9cqw;background:var(--cap);cursor:default;
+  box-shadow:inset 0 -0.45cqw 0 rgba(0,0,0,.32),inset 0 0.2cqw 0 rgba(255,255,255,.07);
+  display:flex;align-items:flex-start;justify-content:flex-start;padding:.7cqw .9cqw;overflow:hidden;
+  transition:transform .12s ease-out}
+.k .lg,.k .fl{font-family:var(--f-cap);font-size:1.45cqw;line-height:1.1;color:var(--legend);text-shadow:0 0 .4cqw rgba(0,0,0,.7);
+  white-space:nowrap;transition:opacity .22s ease-out,transform .22s ease-out}
+.k .fl{position:absolute;left:.9cqw;bottom:.8cqw;font-size:1.15cqw;opacity:0;transform:translateY(.6cqw);color:#BFD0FF}
+.kb.fnlayer .k .lg{opacity:.28}
+.kb.fnlayer .k.hasfn .lg{opacity:0;transform:translateY(-.6cqw)}
+.kb.fnlayer .k.hasfn .fl{opacity:1;transform:none;top:.7cqw;bottom:auto;font-size:1.35cqw;color:#fff}
+.kb.fnlayer .k.hasfn{box-shadow:inset 0 -0.45cqw 0 rgba(0,0,0,.32),inset 0 0 0 .22cqw rgba(143,164,255,.85)}
+.k.pressed{transform:translateY(.25cqw)}
+.k.sel{outline:.3cqw solid #fff;outline-offset:.15cqw;z-index:2}
+.kb.pick .k{cursor:pointer}
+.kb.pick .k:hover{filter:brightness(1.25)}
+.k.flip{animation:flip .34s cubic-bezier(.3,.7,.3,1)}
+@keyframes flip{0%{transform:perspective(300px) rotateX(0)}50%{transform:perspective(300px) rotateX(90deg)}100%{transform:perspective(300px) rotateX(0)}}
+@container (max-width:420px){.k .lg,.k .fl{display:none}}
+.kb.waiting{animation:wake 2.4s ease-in-out infinite}
+@keyframes wake{0%,100%{box-shadow:0 0 0 0 rgba(143,164,255,0),0 14px 30px -12px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 4px rgba(143,164,255,.55),0 14px 30px -12px rgba(0,0,0,.35)}}
+
+/* ---------- 3D model ---------- */
+.kb3d{position:relative;aspect-ratio:16/7;max-width:100%;cursor:grab}
+.kb3d:active{cursor:grabbing}
+.kb3d canvas{display:block;width:100%!important;height:100%!important}
+.kb3d.kb{aspect-ratio:auto;cursor:default}
+.kb3d-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:.9rem}
+.kb3d-bar .seg{font-family:var(--f-mac)}
+.kb3d-bar .seg button{padding:5px 12px;white-space:nowrap}
+.kb3d-bar select{padding:5px 8px;border-radius:7px;border:1px solid var(--line);background:var(--panel)}
+@media (max-width:600px){.kb3d{aspect-ratio:4/3}}
+
+/* ---------- Analysis ---------- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:.93rem}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.85rem}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap;border:1px solid currentColor}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{color:var(--ok)} .pill.part{color:var(--warn)} .pill.no{color:var(--bad)}
+.prereq{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.prereq div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:.93rem}
+.prereq b{display:block;margin-bottom:4px}
+
+/* ---------- Direction switcher ---------- */
+.dirs{display:flex;flex-wrap:wrap;gap:8px}
+.dir{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left;min-width:0;flex:1 1 200px}
+.dir b{display:block;font-size:.98rem}
+.dir span{font-size:.84rem;color:var(--muted)}
+.dir[aria-selected="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.stage{display:grid;gap:18px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 28px;font-size:.93rem}
+.notes h4{margin:0 0 4px;font-size:.9rem}
+.notes ul{margin:0;padding-left:18px;color:var(--muted)}
+.notes li{margin:2px 0}
+
+/* ---------- Mac window (A) ---------- */
+.mac{font-family:var(--f-mac);font-size:13px;background:var(--mac-win);border:1px solid var(--mac-line);border-radius:12px;overflow:hidden;
+  box-shadow:0 30px 60px -30px rgba(10,20,40,.45),0 2px 6px rgba(10,20,40,.08)}
+.tbar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--mac-bar);border-bottom:1px solid var(--mac-line)}
+.lights{display:flex;gap:8px}.lights i{width:12px;height:12px;border-radius:50%;background:#FF5F57}.lights i:nth-child(2){background:#FEBC2E}.lights i:nth-child(3){background:#28C840}
+.tbar .ttl{font-weight:600}
+.tbar .right{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:11.5px;padding:2px 8px;border-radius:6px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.chip.live{color:var(--ok)}
+.macbody{display:grid;grid-template-columns:170px 1fr;min-height:520px}
+.side{background:var(--mac-side);border-right:1px solid var(--mac-line);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.side button{all:unset;cursor:pointer;padding:6px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.side button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.side button:focus-visible{outline:2px solid var(--accent)}
+.side small{font-size:10.5px;opacity:.7}
+.side .grp{font-size:11px;color:var(--muted);padding:10px 10px 4px;font-weight:600}
+.main{padding:18px;display:grid;gap:16px;min-width:0;align-content:start}
+.mrow{display:grid;grid-template-columns:1fr 210px;gap:18px;min-width:0}
+.insp{display:grid;gap:14px;align-content:start}
+.insp label,.insp .lbl{font-size:11.5px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600}
+.seg{display:flex;background:var(--chip);border-radius:7px;padding:2px}
+.seg button{all:unset;flex:1;text-align:center;padding:4px 0;border-radius:5px;cursor:pointer;font-size:12px;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"]{background:var(--mac-win);box-shadow:0 1px 2px rgba(0,0,0,.2);font-weight:600}
+.seg button:focus-visible{outline:2px solid var(--accent)}
+.swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+.sw{all:unset;aspect-ratio:1;border-radius:50%;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.sw[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+.sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fx{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.fx button{all:unset;cursor:pointer;border-radius:8px;border:1px solid var(--mac-line);background:var(--mac-win);overflow:hidden;display:grid}
+.fx button i{display:block;height:26px}
+.fx button span{font-size:11.5px;padding:5px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.fx button:hover{border-color:var(--muted)}
+.fx button:focus-visible{outline:2px solid var(--accent)}
+.status{display:flex;align-items:center;gap:12px;padding:9px 14px;border-top:1px solid var(--mac-line);background:var(--mac-bar);font-size:12px;color:var(--muted);min-height:38px;flex-wrap:wrap}
+.packets{display:flex;gap:2px;flex-wrap:wrap}
+.packets i{width:7px;height:10px;border-radius:2px;background:var(--line);transition:background .12s ease-out,transform .12s ease-out}
+.packets i.ack{background:var(--ok)}
+.packets i.retry{background:var(--warn);transform:scaleY(1.3)}
+.tick{color:var(--ok);font-weight:600}
+.kdetail{font-size:12.5px;display:grid;gap:8px}
+.kdetail .raw{font-family:var(--f-term);font-size:11.5px;color:var(--muted)}
+.kdetail select{width:100%;padding:5px 6px;border-radius:6px;border:1px solid var(--mac-line);background:var(--mac-win)}
+.btn{all:unset;cursor:pointer;text-align:center;padding:6px 12px;border-radius:7px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:12.5px}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.list{border:1px solid var(--mac-line);border-radius:8px;overflow:hidden}
+.list div{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--mac-line);align-items:center;flex-wrap:wrap}
+.list div:last-child{border-bottom:0}
+.list .v{color:var(--muted);font-variant-numeric:tabular-nums}
+.locked{display:grid;place-items:center;text-align:center;gap:8px;padding:50px 20px;color:var(--muted);border:1px dashed var(--mac-line);border-radius:10px}
+
+/* ---------- Menu bar (B) ---------- */
+.desk{position:relative;border-radius:12px;overflow:hidden;min-height:470px;border:1px solid var(--mac-line);
+  background:radial-gradient(120% 90% at 20% 10%,#5A6FB8 0%,#2D3A6B 45%,#1A2142 100%)}
+.mbar{display:flex;justify-content:flex-end;align-items:center;gap:16px;padding:4px 14px;background:rgba(255,255,255,.18);backdrop-filter:blur(20px);color:#fff;font-family:var(--f-mac);font-size:13px}
+.mbar button{all:unset;cursor:pointer;display:grid;place-items:center;padding:2px 6px;border-radius:5px}
+.mbar button[aria-expanded="true"]{background:rgba(255,255,255,.28)}
+.mbar button:focus-visible{outline:2px solid #fff}
+.pop{position:absolute;right:max(14px,4%);top:36px;width:310px;max-width:calc(100% - 28px);background:var(--mac-win);color:var(--ink);font-family:var(--f-mac);font-size:13px;
+  border-radius:12px;border:1px solid var(--mac-line);box-shadow:0 24px 50px -16px rgba(0,0,0,.55);padding:14px;display:grid;gap:12px;
+  transform-origin:calc(100% - 92px) 0;transition:transform .2s cubic-bezier(.2,.9,.3,1.15),opacity .15s ease-out}
+.pop.closed{transform:scale(.85);opacity:0;pointer-events:none;transition:transform .13s ease-in,opacity .13s ease-in}
+.pop .hd{display:flex;align-items:center;gap:10px}
+.pop .hd b{font-size:14px}
+.ring{width:34px;height:34px;margin-left:auto}
+.qfx{display:flex;flex-wrap:wrap;gap:6px}
+.qfx button{all:unset;cursor:pointer;font-size:12px;padding:4px 9px;border-radius:99px;background:var(--chip)}
+.qfx button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.qfx button:focus-visible{outline:2px solid var(--accent)}
+.pop hr{border:0;border-top:1px solid var(--mac-line);margin:0}
+.menuitem{display:flex;justify-content:space-between;padding:3px 2px;color:var(--ink)}
+.menuitem kbd{font-family:var(--f-mac);color:var(--muted)}
+
+/* ---------- Browser (C) ---------- */
+.browser{border:1px solid var(--mac-line);border-radius:12px;overflow:hidden;background:var(--panel);box-shadow:0 30px 60px -30px rgba(10,20,40,.4)}
+.bbar{display:flex;align-items:center;gap:12px;padding:9px 12px;background:var(--mac-bar);border-bottom:1px solid var(--mac-line);font-family:var(--f-mac);font-size:12.5px}
+.url{flex:1;min-width:0;background:var(--mac-win);border-radius:7px;padding:4px 10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.web{position:relative;padding:22px;display:grid;gap:18px;min-height:470px}
+.webtop{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.webtop h3{font-size:1.3rem}
+.toolbar{display:flex;flex-wrap:wrap;gap:18px;align-items:end}
+.toolbar .lbl{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.toolbar select{padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:var(--bg)}
+.connect{display:grid;place-items:center;text-align:center;gap:14px;padding:60px 16px}
+.chooser{position:absolute;left:50%;top:18px;transform:translateX(-50%);width:min(400px,calc(100% - 32px));background:var(--mac-win);border:1px solid var(--mac-line);
+  border-radius:10px;box-shadow:0 20px 50px -10px rgba(0,0,0,.5);padding:14px;font-family:var(--f-mac);font-size:13px;display:grid;gap:10px;animation:drop .2s ease-out}
+@keyframes drop{from{transform:translate(-50%,-8px);opacity:0}}
+.chooser .dev{padding:8px 10px;border-radius:6px;background:var(--accent);color:var(--accent-ink)}
+.chooser .acts{display:flex;justify-content:flex-end;gap:8px}
+
+/* ---------- Terminal (D) ---------- */
+.term{background:#0E1117;color:#C9D1DC;border-radius:12px;border:1px solid #262C36;font-family:var(--f-term);font-size:13px;line-height:1.5;overflow:hidden;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}
+.term .tbar{background:#171B23;border-color:#262C36;color:#8B95A6}
+.tscroll{overflow-x:auto;padding:14px 16px 18px}
+.tin{min-width:68ch;white-space:pre}
+.tin:focus{outline:none}
+.term:focus-within{border-color:#4A5A86}
+.tk{display:inline-block;text-align:center;color:#fff;text-shadow:0 0 3px #000}
+.tdim{color:#6B7586}.tacc{color:#9DB1FF}.tok{color:#6BD49A}
+
+/* ---------- Motion catalogue ---------- */
+.motion{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px;align-content:start;min-width:0}
+.demo{background:var(--bg);border-radius:9px;min-height:120px;display:grid;place-items:center;padding:16px;gap:10px;position:relative}
+.spec{font-size:.86rem;color:var(--muted);display:grid;gap:3px}
+.spec code{font-size:.8rem}
+.solo{width:64px;height:64px;font-size:13px;container-type:normal}
+.minirow{display:flex;gap:6px}
+.mk{width:52px;height:52px;border-radius:8px;background:var(--cap);color:var(--legend);font-family:var(--f-cap);font-size:12px;display:grid;place-items:center;position:relative;
+  box-shadow:inset 0 -4px 0 rgba(0,0,0,.32)}
+.mk span{position:absolute;transition:opacity .22s ease-out,transform .22s ease-out}
+.mk .b2{opacity:0;transform:translateY(8px);color:#BFD0FF}
+.minirow.fn .mk.has .b1{opacity:0;transform:translateY(-8px)}
+.minirow.fn .mk.has .b2{opacity:1;transform:none}
+.minirow.fn .mk:not(.has) .b1{opacity:.3}
+.minirow.fn .mk.has{box-shadow:inset 0 -4px 0 rgba(0,0,0,.32),inset 0 0 0 2px rgba(143,164,255,.85)}
+.ghostkb{width:200px;height:64px;border-radius:10px;background:var(--case);opacity:.9}
+.ghostkb.waiting{animation:wake 2.4s ease-in-out infinite}
+.rec{display:grid;gap:16px}
+.rec ol{margin:0;padding-left:22px;display:grid;gap:8px}
+
+@media (max-width:820px){
+  .macbody{grid-template-columns:1fr}
+  .side{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--mac-line)}
+  .side .grp{display:none}
+  .mrow{grid-template-columns:1fr}
+  .fx{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="stack read">
+  <h1>Frontends for the F65 controller</h1>
+  <p>Today <code>f65</code> is a 436-line Swift CLI that talks to the AULA F65 over IOKit HID: it reads and writes lighting and both key layers, and backs everything up before each write. Below is what a frontend has to surface, four ways to build it, and the motion each one needs. Lighting values are loaded from your latest backup (<code>f65-20261117-023015.txt</code>).</p>
+</header>
+
+<section class="stack" aria-labelledby="live-h">
+  <div class="kb3d" id="heroKb" role="img" aria-label="3D model of the AULA F65 lit with your saved lighting. Drag to turn it."></div>
+  <div class="kb3d-bar">
+    <label for="heroFx" class="muted">Effect</label><select id="heroFx"></select>
+    <div class="seg" id="cw" role="group" aria-label="Colourway"><button aria-pressed="true" data-c="light">Grey and white</button><button aria-pressed="false" data-c="dark">Black</button></div>
+    <button class="btn ghost" id="resetView">Reset view</button>
+  </div>
+  <p class="muted" style="font-size:.9rem">Drag to turn the board. Click a key, or type on your F65, to press it; Ripples, Reaction, Shadow and Flash away respond to presses. The model follows the F65's 67-key layout and 325 × 116 mm footprint. Effects are approximations drawn in the browser, not read from the keyboard.</p>
+</section>
+
+<section class="stack" aria-labelledby="have-h">
+  <h2 id="have-h">What the codebase can drive</h2>
+  <p class="read">Each protocol command maps to a screen. Only the confirmed read/write paths should ship as editable controls; the rest show up as read-only or reserved space so the layout does not change when they land.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Feature</th><th>HID command</th><th>State in f65.swift</th><th>What the frontend shows</th></tr></thead>
+    <tbody>
+      <tr><td>Connection and wake</td><td><code>07</code></td><td><span class="pill ok">Working</span></td><td>Online chip; wake prompt that pulses for up to 60 s</td></tr>
+      <tr><td>Effect, brightness, speed, colour</td><td><code>04</code> / <code>44</code></td><td><span class="pill ok">Read and write</span></td><td>Lighting panel with live preview; per-effect settings (each effect keeps its own slot)</td></tr>
+      <tr><td>Key remap, base and Fn layers</td><td><code>01</code> / <code>41</code></td><td><span class="pill ok">Read and write</span></td><td>Clickable keymap with a layer switch</td></tr>
+      <tr><td>Backups and restore</td><td>file + <code>01</code>, <code>04</code></td><td><span class="pill ok">Working</span></td><td>Restore points list; undo after every write</td></tr>
+      <tr><td>Battery / onboard flags</td><td><code>4A</code> → <code>64 10</code></td><td><span class="pill part">Read, meaning unconfirmed</span></td><td>Battery ring, labelled as an estimate until confirmed</td></tr>
+      <tr><td>Macros</td><td><code>03</code> / <code>43</code></td><td><span class="pill part">Read only</span></td><td>Locked section that explains why</td></tr>
+      <tr><td>Per-key RGB</td><td><code>09</code> / <code>49</code></td><td><span class="pill no">No reply yet</span></td><td>Reserved: the keymap canvas doubles as a paint surface later</td></tr>
+      <tr><td>Game mode, sleep, debounce, direction</td><td><code>02</code>, LED bytes <code>00–37</code></td><td><span class="pill no">Blocked / undecoded</span></td><td>Hidden until decoded</td></tr>
+    </tbody>
+  </table></div>
+  <h3 style="margin-top:10px">Before any of these can ship</h3>
+  <div class="prereq">
+    <div><b>Split out an F65Kit package</b>Move the <code>F65</code> class, key tables and backup code out of the CLI file so the app and CLI share one library.</div>
+    <div><b>No more exit() and print()</b>Commands call <code>exit</code> on failure. A UI needs thrown errors with messages it can show next to the control.</div>
+    <div><b>Progress from write()</b>Each 14-byte packet is acked. Exposing a per-packet callback drives the real progress bar (10 packets for lighting, 36 for a key layer).</div>
+    <div><b>Device actor + hot-plug</b>Run HID I/O on its own actor/run loop, register a matching callback for plug/unplug, and publish unsolicited <code>0A</code> status reports as live state.</div>
+  </div>
+</section>
+
+<section class="stack" aria-labelledby="dir-h">
+  <h2 id="dir-h">Four directions</h2>
+  <div class="dirs" role="tablist" aria-label="Frontend directions">
+    <button class="dir" role="tab" id="t-a" aria-controls="p-a" aria-selected="true"><b>Mac app</b><span>SwiftUI window, full editor</span></button>
+    <button class="dir" role="tab" id="t-b" aria-controls="p-b" aria-selected="false"><b>Menu bar</b><span>Quick switcher, always one click away</span></button>
+    <button class="dir" role="tab" id="t-c" aria-controls="p-c" aria-selected="false"><b>Browser</b><span>WebHID page, nothing to install</span></button>
+    <button class="dir" role="tab" id="t-d" aria-controls="p-d" aria-selected="false"><b>Terminal UI</b><span>Interactive version of today's CLI</span></button>
+  </div>
+
+  <!-- A: Mac app -->
+  <div class="stage" id="p-a" role="tabpanel" aria-labelledby="t-a">
+    <div class="mac">
+      <div class="tbar"><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div><span class="ttl">F65</span>
+        <div class="right"><span class="chip live">● Online</span><span class="chip">2.4G receiver 3554:FA09</span><span class="chip">Battery ~100%</span></div></div>
+      <div class="macbody">
+        <nav class="side" role="tablist" aria-label="Sections">
+          <span class="grp">Keyboard</span>
+          <button role="tab" aria-selected="true" data-sec="light">Lighting</button>
+          <button role="tab" aria-selected="false" data-sec="keys">Keys</button>
+          <button role="tab" aria-selected="false" data-sec="macros">Macros <small>soon</small></button>
+          <span class="grp">Device</span>
+          <button role="tab" aria-selected="false" data-sec="device">Restore points</button>
+        </nav>
+        <div class="main">
+          <div class="mrow">
+            <div style="min-width:0"><div class="kb3d" id="macKb3" role="img" aria-label="3D preview of the F65"></div><div class="kb" id="macKb" hidden></div></div>
+            <div class="insp" id="inspLight">
+              <div><span class="lbl" id="effName">Fixed</span><span class="muted" style="font-size:11.5px">Settings saved per effect</span></div>
+              <div><span class="lbl">Brightness</span><div class="seg" id="segBri" role="group" aria-label="Brightness"></div></div>
+              <div><span class="lbl">Speed</span><div class="seg" id="segSpd" role="group" aria-label="Speed"></div></div>
+              <div><span class="lbl">Colour</span><div class="swatches" id="sw" role="group" aria-label="Colour"></div></div>
+            </div>
+            <div class="insp" id="inspKeys" hidden>
+              <div class="seg" id="segLayer" role="group" aria-label="Layer"><button aria-pressed="true" data-l="0">Base</button><button aria-pressed="false" data-l="1">Fn layer</button></div>
+              <div class="kdetail" id="kdetail"><span class="muted">Click a key to see what it sends and change it.</span></div>
+            </div>
+          </div>
+          <div id="secLight"><div class="fx" id="fxGrid" aria-label="Effects. Hover to preview, click to apply"></div></div>
+          <div id="secKeys" hidden><p class="muted" style="font-size:12.5px">Blue outlines on the Fn layer mark keys with a second function. Remaps are written to the selected layer only, after a backup.</p></div>
+          <div id="secMacros" hidden><div class="locked"><b style="color:var(--ink)">Macros are read-only for now</b><span>The keyboard's macro memory is readable (512 bytes, currently empty). Writing is disabled in f65 until the format is confirmed.</span></div></div>
+          <div id="secDevice" hidden><div class="list" id="backups"></div></div>
+        </div>
+      </div>
+      <div class="status" id="macStatus" aria-live="polite"><span>Loaded from keyboard</span></div>
+    </div>
+    <div class="notes">
+      <div><h4>Good at</h4><ul><li>Reuses the Swift HID code directly</li><li>Room for the full keymap and future per-key RGB painting</li><li>Native permissions prompt (Input Monitoring) handled once</li></ul></div>
+      <div><h4>Costs</h4><ul><li>Biggest build: navigation, state, error handling</li><li>Needs signing/notarisation to share</li></ul></div>
+      <div><h4>Motion</h4><ul><li>Hover an effect to preview, click to write</li><li>Packet bar fills from real acks</li><li>Remapped keycap flips to its new legend</li></ul></div>
+    </div>
+  </div>
+
+  <!-- B: Menu bar -->
+  <div class="stage" id="p-b" role="tabpanel" aria-labelledby="t-b" hidden>
+    <div class="desk">
+      <div class="mbar"><span>Tue 17 Nov</span>
+        <button id="mbIcon" aria-expanded="true" aria-controls="pop" aria-label="F65 menu">
+          <svg width="20" height="14" viewBox="0 0 20 14" fill="none" stroke="#fff" stroke-width="1.4"><rect x="1" y="1" width="18" height="12" rx="2.5"/><path d="M4 5h1M7 5h1M10 5h1M13 5h1M16 5h0M5 9h10" stroke-linecap="round"/></svg>
+        </button><span>2:31</span></div>
+      <div class="pop" id="pop">
+        <div class="hd"><div><b>AULA F65</b><div class="muted" style="font-size:12px">2.4G receiver, online</div></div>
+          <svg class="ring" viewBox="0 0 36 36" aria-label="Battery about 100 percent"><circle cx="18" cy="18" r="14" fill="none" stroke="var(--chip)" stroke-width="4"/><circle cx="18" cy="18" r="14" fill="none" stroke="var(--ok)" stroke-width="4" stroke-dasharray="88 88" transform="rotate(-90 18 18)" stroke-linecap="round"/><text x="18" y="22" text-anchor="middle" font-size="10" fill="var(--ink)" font-family="system-ui">100</text></svg></div>
+        <div class="kb" id="popKb"></div>
+        <div><span class="muted" style="font-size:12px">Effect</span><div class="qfx" id="qfx"></div></div>
+        <div><span class="muted" style="font-size:12px">Brightness</span><div class="seg" id="popBri" role="group" aria-label="Brightness"></div></div>
+        <hr>
+        <div class="menuitem"><span>Open F65…</span><kbd>⌘O</kbd></div>
+        <div class="menuitem"><span>Undo last change</span><kbd>⌘Z</kbd></div>
+        <div class="menuitem"><span>Quit</span><kbd>⌘Q</kbd></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><h4>Good at</h4><ul><li>The thing you actually do daily: switch effect, dim the board</li><li>Ships as a <code>MenuBarExtra</code> in the same app target as A</li></ul></div>
+      <div><h4>Costs</h4><ul><li>No room for remapping; links out to the window</li><li>Must stay light on HID polling to save battery</li></ul></div>
+      <div><h4>Motion</h4><ul><li>Popover scales out of the icon (200 ms spring), closes faster (130 ms)</li><li>Click the menu bar icon to try it</li></ul></div>
+    </div>
+  </div>
+
+  <!-- C: Browser -->
+  <div class="stage" id="p-c" role="tabpanel" aria-labelledby="t-c" hidden>
+    <div class="browser">
+      <div class="bbar"><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div><div class="url">localhost:5173</div></div>
+      <div class="web" id="web"></div>
+    </div>
+    <div class="notes">
+      <div><h4>Good at</h4><ul><li>Nothing to install; works on Windows and Linux too</li><li>WebHID speaks the same 20-byte reports on usage page <code>0xFF02</code></li><li>Easy to share with other F65 owners</li></ul></div>
+      <div><h4>Costs</h4><ul><li>Chrome and Edge only (no Safari or Firefox)</li><li>Protocol code gets ported to TypeScript, so two implementations</li><li>Backups live in browser storage unless downloaded</li></ul></div>
+      <div><h4>Motion</h4><ul><li>Device chooser drops in; UI builds once connected</li><li>Use "Replay connect flow" to see it</li></ul></div>
+    </div>
+  </div>
+
+  <!-- D: Terminal -->
+  <div class="stage" id="p-d" role="tabpanel" aria-labelledby="t-d" hidden>
+    <div class="term">
+      <div class="tbar"><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div><span>./f65 ui</span></div>
+      <div class="tscroll"><div class="tin" id="tui" tabindex="0" aria-label="Terminal UI. Focus and use arrow keys"></div></div>
+    </div>
+    <div class="notes">
+      <div><h4>Good at</h4><ul><li>Smallest step from today: same binary, new <code>ui</code> subcommand</li><li>Truecolor ANSI preview of the board</li></ul></div>
+      <div><h4>Costs</h4><ul><li>Remapping by keyboard only; less discoverable</li><li>Hand-rolled terminal drawing in Swift (no common TUI library)</li></ul></div>
+      <div><h4>Motion</h4><ul><li>Frame-rate capped preview (~20 fps) to keep the terminal calm</li><li>Click the terminal, then ← → effect, ↑ ↓ brightness, s speed, c colour</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="stack" aria-labelledby="mo-h">
+  <h2 id="mo-h">Motion catalogue</h2>
+  <p class="read">Every animation answers something the keyboard or the person did. Timings are shared tokens so all four frontends feel the same; with Reduce Motion on, the preview holds one still frame and flips become crossfades.</p>
+  <div class="motion">
+    <div class="mcard"><h3>Write progress</h3>
+      <div class="demo"><div class="packets" id="demoPk"></div><div id="demoPkTxt" class="muted" style="font-size:.85rem">Lighting block, 10 packets</div><button class="btn" id="demoPkBtn">Write lighting</button></div>
+      <div class="spec"><span>One segment per acked packet; amber flash when a packet is resent over 2.4G.</span><span>120 ms per segment, ease-out · SwiftUI <code>.animation(.easeOut(duration:0.12), value: acked)</code></span></div></div>
+    <div class="mcard"><h3>Waiting for the keyboard</h3>
+      <div class="demo"><div class="ghostkb waiting" id="ghost"></div><div class="muted" id="ghostTxt" style="font-size:.85rem">Press any key on the F65 to wake it</div><button class="btn ghost" id="ghostBtn">Simulate wake</button></div>
+      <div class="spec"><span>Slow outline pulse while <code>07</code> returns 0; stops the moment it returns 1.</span><span>2.4 s ease-in-out loop · <code>.repeatForever(autoreverses:true)</code></span></div></div>
+    <div class="mcard"><h3>Remap flip</h3>
+      <div class="demo"><div class="mk" id="flipKey" style="width:84px"><span class="b1" id="flipLbl">Caps</span></div><button class="btn ghost" id="flipBtn">Remap to Ctrl</button></div>
+      <div class="spec"><span>The keycap turns over to show its new legend once read-back verifies.</span><span>340 ms rotateX, spring · <code>.rotation3DEffect</code> + <code>.spring(response:0.34,dampingFraction:0.8)</code></span></div></div>
+    <div class="mcard"><h3>Layer switch</h3>
+      <div class="demo"><div class="minirow" id="layerRow">
+        <div class="mk has"><span class="b1">1</span><span class="b2">F1</span></div><div class="mk has"><span class="b1">Q</span><span class="b2">L8</span></div><div class="mk"><span class="b1">A</span></div><div class="mk has"><span class="b1">U</span><span class="b2">PrtSc</span></div></div>
+        <button class="btn ghost" id="layerBtn">Show Fn layer</button></div>
+      <div class="spec"><span>Legends slide and crossfade; keys without an Fn binding dim instead of moving.</span><span>220 ms ease-out, exits 150 ms · <code>.contentTransition(.opacity)</code></span></div></div>
+    <div class="mcard"><h3>Hover to preview</h3>
+      <div class="demo"><p class="muted" style="font-size:.88rem;text-align:center">In the Mac app mockup, hover an effect tile: the board previews it without writing. Leaving the tile restores the saved effect.</p></div>
+      <div class="spec"><span>Preview runs in the app only; nothing reaches the keyboard until click.</span><span>Crossfade 180 ms · <code>TimelineView(.animation)</code> canvas, paused when window is not key</span></div></div>
+    <div class="mcard"><h3>Keypress echo</h3>
+      <div class="demo"><p class="muted" style="font-size:.88rem;text-align:center">Press keys on your keyboard now. The matching key on each preview dips 0.25 u and reactive effects ripple from it.</p></div>
+      <div class="spec"><span>Shows which physical key you are about to remap: press it instead of hunting for it.</span><span>120 ms ease-out dip · macOS <code>NSEvent.addLocalMonitorForEvents</code></span></div></div>
+  </div>
+</section>
+
+<section class="rec read" aria-labelledby="rec-h">
+  <h2 id="rec-h">Recommendation</h2>
+  <ol>
+    <li>Build the Mac app (A) and the menu bar extra (B) as one SwiftUI target on top of an F65Kit package. They share state, and B covers the daily use while A handles remapping.</li>
+    <li>Keep the CLI as a thin client of F65Kit. The terminal UI (D) is optional; it is cheap once the package exists.</li>
+    <li>Treat the browser version (C) as a later share-with-others project, since it means porting the protocol to TypeScript.</li>
+  </ol>
+  <p class="muted">Tell me which direction (or mix) to take and I'll start with F65Kit and the lighting screen.</p>
+</section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(()=>{
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// ---------- Layout (decoded from the 0x41 matrix: 65%, no right Alt) ----------
+const ROWS=[
+ [["Esc",1,"esc","Escape"],...[1,2,3,4,5,6,7,8,9,0].map(n=>[String(n),1,"d"+n,"Digit"+n]),["-",1,"minus","Minus"],["=",1,"equal","Equal"],["Backspace",2,"bksp","Backspace"],["Del",1,"del","Delete"]],
+ [["Tab",1.5,"tab","Tab"],..."QWERTYUIOP".split("").map(c=>[c,1,c.toLowerCase(),"Key"+c]),["[",1,"lbr","BracketLeft"],["]",1,"rbr","BracketRight"],["\\",1.5,"bslash","Backslash"],["PgUp",1,"pgup","PageUp"]],
+ [["Caps",1.75,"caps","CapsLock"],..."ASDFGHJKL".split("").map(c=>[c,1,c.toLowerCase(),"Key"+c]),[";",1,"semi","Semicolon"],["'",1,"quote","Quote"],["Enter",2.25,"enter","Enter"],["PgDn",1,"pgdn","PageDown"]],
+ [["Shift",2.25,"lshift","ShiftLeft"],..."ZXCVBNM".split("").map(c=>[c,1,c.toLowerCase(),"Key"+c]),[",",1,"comma","Comma"],[".",1,"period","Period"],["/",1,"slash","Slash"],["Shift",1.75,"rshift","ShiftRight"],["↑",1,"up","ArrowUp"],["End",1,"end","End"]],
+ [["Ctrl",1.25,"lctrl","ControlLeft"],["Win",1.25,"lwin","MetaLeft"],["Alt",1.25,"lalt","AltLeft"],["",6.25,"space","Space"],["Fn",1.5,"fn",""],["Ctrl",1.5,"rctrl","ControlRight"],["←",1,"left","ArrowLeft"],["↓",1,"down","ArrowDown"],["→",1,"right","ArrowRight"]]
+];
+const KEYS=[];ROWS.forEach((r,y)=>{let x=0;r.forEach(([l,w,id,code])=>{KEYS.push({id,label:l,w,x,y,cx:x+w/2,cy:y+.5,code});x+=w;});});
+const BY={};KEYS.forEach((k,i)=>{k.i=i;BY[k.id]=k;});
+const CODE={};KEYS.forEach(k=>{if(k.code)CODE[k.code]=k.id;});
+// Fn layer from backup (0x41 sub 1). Raw entries shown in the inspector.
+const FN={esc:["L4","07 00 00 04","Lighting function #4"],tab:["Sys","08 02 00 00","System/connection 02 00 00"],
+ q:["L8","07 00 00 08","Lighting function #8"],w:["L0","07 00 00 00","Lighting function #0"],e:["L5","07 00 00 05","Lighting function #5"],
+ r:["L6","07 00 00 06","Lighting function #6"],t:["L7","07 00 00 07","Lighting function #7"],g:["L10","07 00 00 0a","Lighting function #10"],
+ b:["L17","07 00 00 11","Lighting function #17"],lctrl:["L19","07 00 00 13","Lighting function #19"],lwin:["L1","07 00 00 01","Lighting function #1"],
+ u:["PrtSc","00 00 00 46","PrintScreen"],i:["ScrLk","00 00 00 47","ScrollLock"],o:["Pause","00 00 00 48","Pause"],
+ bslash:["Sys","08 00 00 00","System/connection 00 00 00"],comma:["Sys","08 04 00 01","System/connection 04 00 01"],
+ period:["Sys","08 03 00 01","System/connection 03 00 01"],slash:["Sys","08 02 00 01","System/connection 02 00 01"],
+ rshift:["Sys","08 00 00 01","System/connection 00 00 01"],end:["Home","00 00 00 4a","Home"],
+ left:["Sys","08 04 02 00","System/connection 04 02 00"],right:["Sys","08 04 01 00","System/connection 04 01 00"]};
+[1,2,3,4,5,6,7,8,9,0,"minus","equal"].forEach((n,ix)=>{const id=typeof n==="number"?"d"+n:n;FN[id]=["F"+(ix+1),"00 00 00 "+(0x3a+ix).toString(16),"F"+(ix+1)];});
+const HIDBASE=id=>{const k=BY[id];const map={esc:"29",bksp:"2a",tab:"2b",caps:"39",enter:"28",space:"2c",del:"4c",pgup:"4b",pgdn:"4e",end:"4d",up:"52",down:"51",left:"50",right:"4f",minus:"2d",equal:"2e",lbr:"2f",rbr:"30",bslash:"31",semi:"33",quote:"34",comma:"36",period:"37",slash:"38"};
+  const mods={lctrl:"00 01 00 00",lshift:"00 02 00 00",lalt:"00 04 00 00",lwin:"00 08 00 00",rctrl:"00 10 00 00",rshift:"00 20 00 00"};
+  if(mods[id])return mods[id]; if(id==="fn")return "0d 00 00 00"; if(map[id])return "00 00 00 "+map[id];
+  if(/^[a-z]$/.test(id))return "00 00 00 "+(id.charCodeAt(0)-97+4).toString(16).padStart(2,"0");
+  if(/^d\d$/.test(id)){const n=+id[1];return "00 00 00 "+(n===0?"27":(0x1d+n).toString(16));}
+  return "—";};
+
+// ---------- Lighting state from backup LED block ----------
+const LED="00 03 03 02 00 00 04 04 07 00 01 20 01 00 01 00 00 00 03 02 04 02 00 ff 02 00 01 00 01 00 04 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff 04 37 04 37 04 35 04 37 04 37 04 37 04 37 04 37 04 37 04 37 02 47 04 31 04 37 04 37 04 37 04 37 04 37 04 37 04 37 04 37 07 47 07 47 07 44 07 44 07 44 07 44 07 44 07 44 07 44 04 04 04 04 04 04 04 04 04 04 5a a5".split(" ").map(h=>parseInt(h,16));
+const EFFECTS=["fixed","breathing","rainbow","flash-away","raindrops","rainbow-wheel","ripples","stars","shadow","snake","neon","reaction","sine-wave","scanning","windmill","waterfall","blossom","storm"];
+const ENAME=["Fixed","Breathing","Rainbow","Flash away","Raindrops","Rainbow wheel","Ripples","Stars","Shadow","Snake","Neon","Reaction","Sine wave","Scanning","Windmill","Waterfall","Blossom","Storm"];
+const CNAME=["Red","Orange","Yellow","Green","Cyan","Blue","Purple","Multicolour"];
+const HUES=[0,26,52,125,186,222,280];
+const S={effect:LED[0x0a],slots:{},preview:null};
+for(let e=1;e<=18;e++){const o=0x38+2*e;S.slots[e]={bri:LED[o],spd:LED[o+1]>>4,col:LED[o+1]&15};}
+const cur=()=>S.slots[S.effect];
+
+// ---------- Effects ----------
+const rnd=KEYS.map((_,i)=>{let x=Math.sin(i*12.9898)*43758.5453;return x-Math.floor(x);});
+const rnd2=KEYS.map((_,i)=>{let x=Math.sin(i*78.233+1)*12345.678;return x-Math.floor(x);});
+const snakeOrder=(()=>{const o=[];for(let y=0;y<5;y++){const row=KEYS.filter(k=>k.y===y).sort((a,b)=>a.x-b.x);if(y%2)row.reverse();o.push(...row);}const m={};o.forEach((k,i)=>m[k.id]=i);return m;})();
+const presses=[];
+const CAP=[46,52,65];
+function hsl(h){h=((h%360)+360)%360;const f=n=>{const k=(n+h/30)%12;return .55-.45*Math.max(-1,Math.min(k-3,9-k,1));};return [f(0)*255,f(8)*255,f(4)*255];}
+function mix(i,rgb){i=Math.max(0,Math.min(1,i));return `rgb(${CAP[0]+(rgb[0]-CAP[0])*i|0},${CAP[1]+(rgb[1]-CAP[1])*i|0},${CAP[2]+(rgb[2]-CAP[2])*i|0})`;}
+const SPD=[.35,.6,1,1.5,2.2],BRI=[0,.3,.55,.8,1];
+function lightFor(eff,slot,k,now){
+  const T=now*SPD[slot.spd], b=BRI[slot.bri], multi=slot.col===7;
+  const baseHue=multi?k.cx*22+T*30:HUES[slot.col];
+  let i=1,h=baseHue;
+  const age=p=>now-p.t, dist=p=>Math.hypot(k.cx-p.x,(k.cy-p.y)*1.1);
+  switch(eff){
+    case 1:break;
+    case 2:i=.5-.5*Math.cos(T*2);break;
+    case 3:h=k.cx*24-T*90;break;
+    case 4:i=0;for(const p of presses){const a=age(p),r=a*14;if(Math.abs(k.cy-p.y)<.6&&Math.abs(k.cx-p.x)<=r)i=Math.max(i,1-a/1.1);}break;
+    case 5:{const ph=(T*.5+rnd[k.i]*3)%3;i=Math.max(0,1-ph*1.6);if(multi)h=rnd2[k.i]*360+Math.floor(T*.5+rnd[k.i]*3)*97;break;}
+    case 6:h=Math.atan2(k.cy-2.5,(k.cx-8)/2)*57.3+T*120;break;
+    case 7:i=0;for(const p of presses){const a=age(p);i=Math.max(i,Math.max(0,1-Math.abs(dist(p)-a*9))*(1-a/1.6));}break;
+    case 8:i=Math.pow(Math.max(0,Math.sin(T*1.4+rnd[k.i]*6.28)),10);if(multi)h=rnd2[k.i]*360;break;
+    case 9:i=1;for(const p of presses){const a=age(p);i=Math.min(i,1-Math.max(0,1-dist(p)/1.6)*(1-a/1.2));}break;
+    case 10:{const n=KEYS.length,head=(T*9)%n,d=(head-snakeOrder[k.id]+n)%n;i=d<7?1-d/7:0;if(multi)h=snakeOrder[k.id]*8;break;}
+    case 11:h=T*45+(multi?0:0);break;
+    case 12:i=0;for(const p of presses){if(p.id===k.id)i=Math.max(i,1-age(p)/.9);}break;
+    case 13:i=.5+.5*Math.sin(k.cx*.7-T*3.2);break;
+    case 14:{const bar=8+8.2*Math.sin(T*1.6);i=Math.max(0,1-Math.abs(k.cx-bar)/1.6);break;}
+    case 15:{const a=Math.atan2(k.cy-2.5,(k.cx-8)/2.2);i=Math.pow(Math.max(0,Math.cos(2*(a-T*1.6))),3);break;}
+    case 16:h=k.cy*55-T*130;i=.65+.35*Math.sin(k.cy*1.3-T*4);break;
+    case 17:{const d=Math.hypot((k.cx-8)/1.6,k.cy-2.5);h=d*40-T*90;i=.55+.45*Math.sin(d*1.4-T*3);break;}
+    case 18:{const f=Math.floor(T*3),fr=T*3-f;let x=Math.sin((Math.floor(k.cx/3)*7+f*13)*12.9)*9999;x-=Math.floor(x);i=x>.72?Math.pow(1-fr,2):.06;h=multi?220+x*60:h;break;}
+  }
+  if(eff===11&&!multi)h=HUES[slot.col]+20*Math.sin(T);
+  if([3,6,16,17].includes(eff)&&!multi){h=HUES[slot.col]+(h%40);}
+  return [h,i*b];
+}
+function colorFor(eff,slot,k,now){const [h,a]=lightFor(eff,slot,k,now);return mix(a,hsl(h));}
+
+// ---------- Keyboard builder ----------
+const boards=[];
+function buildKb(el,opts={}){
+  const plate=document.createElement("div");plate.className="plate";el.appendChild(plate);
+  const els=KEYS.map(k=>{const d=document.createElement("div");d.className="k";d.dataset.id=k.id;
+    d.style.left=`calc(${k.x/16*100}% + .25cqw)`;d.style.top=`calc(${k.y/5*100}% + .25cqw)`;d.style.width=`calc(${k.w/16*100}% - .5cqw)`;d.style.height=`calc(20% - .5cqw)`;
+    d.innerHTML=`<span class="lg">${k.label}</span>`+(FN[k.id]?`<span class="fl">${FN[k.id][0]}</span>`:"");if(FN[k.id])d.classList.add("hasfn");
+    plate.appendChild(d);return d;});
+  const b={el,els,panel:opts.panel,static:false};boards.push(b);return b;
+}
+function paint(b,now){if(b.update){b.update(now);return;}const eff=S.preview??S.effect,slot=S.slots[eff];
+  for(let i=0;i<KEYS.length;i++)b.els[i].style.background=colorFor(eff,slot,KEYS[i],now);}
+
+// ---------- 3D model (three.js) ----------
+const CW={light:{c:0xD3D6DB,a:0xF0EFEB,m:0xA9B0BA,x:0x5B75AC,la:"#2C313A",lm:"#262B33",lx:"#FFFFFF"},
+          dark:{c:0x2A2D34,a:0x3B3F48,m:0x23262C,x:0x9CAACB,la:"#E4E7EC",lm:"#C3C8D1",lx:"#191C22"}};
+let cwName="light";
+const MODK=new Set(["tab","caps","lshift","rshift","lctrl","lwin","lalt","fn","rctrl","bksp","del","pgup","pgdn","end","up","down","left","right"]);
+const role=id=>(id==="esc"||id==="enter")?"x":MODK.has(id)?"m":"a";
+if(window.THREE&&THREE.ColorManagement)THREE.ColorManagement.legacyMode=false;
+let glowTex=null;
+function getGlow(){if(glowTex)return glowTex;const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");
+  const r=g.createRadialGradient(32,32,3,32,32,32);r.addColorStop(0,"rgba(255,255,255,1)");r.addColorStop(.5,"rgba(255,255,255,.6)");r.addColorStop(1,"rgba(255,255,255,0)");
+  g.fillStyle=r;g.fillRect(0,0,64,64);glowTex=new THREE.CanvasTexture(c);return glowTex;}
+function drawLegend(lg){const {ctx,cv,k,tex}=lg,C=CW[cwName],r=role(k.id);ctx.clearRect(0,0,cv.width,cv.height);
+  if(k.label){ctx.fillStyle=r==="a"?C.la:r==="m"?C.lm:C.lx;const big=k.label.length<=2;
+    ctx.font=`500 ${big?74:40}px Rubik,"Hanken Grotesk",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(k.label,cv.width/2,cv.height/2+2);}
+  tex.needsUpdate=true;}
+function rr(T,w,h,r){const s=new T.Shape(),x=-w/2,y=-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);
+  s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;}
+function build3D(el){
+  const fallback=()=>{el.classList.add("kb");return buildKb(el);};
+  if(!window.THREE||!THREE.OrbitControls)return fallback();
+  const T=THREE;let renderer;
+  try{renderer=new T.WebGLRenderer({antialias:true,alpha:true});}catch(e){return fallback();}
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputEncoding=T.sRGBEncoding;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+  el.appendChild(renderer.domElement);renderer.domElement.style.touchAction="pan-y";
+  const scene=new T.Scene(),cam=new T.PerspectiveCamera(30,2,10,4000);
+  const controls=new T.OrbitControls(cam,renderer.domElement);
+  Object.assign(controls,{enableDamping:!RM,dampingFactor:.08,enablePan:false,enableZoom:false,minPolarAngle:.12,maxPolarAngle:1.3,minAzimuthAngle:-1.2,maxAzimuthAngle:1.2});
+  controls.target.set(0,14,0);
+  scene.add(new T.HemisphereLight(0xffffff,0x3c4150,.8));
+  const sun=new T.DirectionalLight(0xffffff,1.1);sun.position.set(-140,340,200);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  Object.assign(sun.shadow.camera,{left:-230,right:230,top:170,bottom:-170,near:10,far:1000});sun.shadow.bias=-.0004;sun.shadow.radius=4;scene.add(sun);
+  const rim=new T.DirectionalLight(0xc4d2ff,.35);rim.position.set(220,140,-220);scene.add(rim);
+  const ground=new T.Mesh(new T.PlaneGeometry(1600,1600),new T.ShadowMaterial({opacity:.2}));ground.rotation.x=-Math.PI/2;ground.position.y=-9;ground.receiveShadow=true;scene.add(ground);
+  const kb=new T.Group();kb.rotation.x=.075;scene.add(kb);   // typing angle: back edge sits higher
+  const U=19.05,PLATE=10,CAPY=16,ROWH=[9.4,8.4,7.8,8.8,8.8];
+  // Case: 325 x 115.6 mm outer, bevelled frame around the plate
+  const caseMat=new T.MeshStandardMaterial({color:CW[cwName].c,roughness:.5,metalness:.04});
+  const outer=rr(T,320,110.6,9);outer.holes.push(rr(T,16*U+7.5,5*U+7.5,3));
+  const fg=new T.ExtrudeGeometry(outer,{depth:17,bevelEnabled:true,bevelThickness:2.5,bevelSize:2.5,bevelSegments:5,curveSegments:12});
+  fg.rotateX(-Math.PI/2);fg.translate(0,2.5,0);
+  const frame=new T.Mesh(fg,caseMat);frame.castShadow=true;frame.receiveShadow=true;kb.add(frame);
+  const base=new T.Mesh(new T.BoxGeometry(312,PLATE,104),caseMat);base.position.y=PLATE/2;base.receiveShadow=true;kb.add(base);
+  const plate=new T.Mesh(new T.BoxGeometry(308,1.2,99),new T.MeshStandardMaterial({color:0x1A1C21,roughness:.7}));plate.position.y=PLATE+.6;plate.receiveShadow=true;kb.add(plate);
+  const swGeo=new T.BoxGeometry(14,4,14),swMat=new T.MeshStandardMaterial({color:0x16181C,roughness:.55});
+  const caps=[],glows=[],legs=[],pressT=new Float64Array(KEYS.length).fill(-99);
+  KEYS.forEach(k=>{
+    const x=(k.x+k.w/2-8)*U,z=(k.y+.5-2.5)*U;
+    const sw=new T.Mesh(swGeo,swMat);sw.position.set(x,PLATE+3.2,z);kb.add(sw);
+    // Keycap: rounded footprint, tapered toward a smaller top, row-sculpted heights
+    const wb=k.w*U-3.2,db=U-3.2,h=ROWH[k.y];
+    const g=new T.ExtrudeGeometry(rr(T,wb,db,1.6),{depth:h,bevelEnabled:true,bevelThickness:.9,bevelSize:.9,bevelSegments:3,curveSegments:5});
+    g.rotateX(-Math.PI/2);
+    const p=g.attributes.position;
+    for(let j=0;j<p.count;j++){const t=Math.max(0,Math.min(1,p.getY(j)/h));p.setX(j,p.getX(j)*(1-t*5.2/(wb+1.8)));p.setZ(j,p.getZ(j)*(1-t*5.6/(db+1.8))-t*1.1);}
+    g.computeVertexNormals();
+    const mat=new T.MeshStandardMaterial({color:CW[cwName][role(k.id)],roughness:.86,metalness:0});
+    const cap=new T.Mesh(g,mat);cap.position.set(x,CAPY,z);cap.castShadow=true;cap.receiveShadow=true;cap.userData.id=k.id;kb.add(cap);caps.push(cap);
+    const topW=(wb+1.8)-5.2,topD=(db+1.8)-5.6;
+    const cv=document.createElement("canvas");cv.width=Math.round(topW*16);cv.height=Math.round(topD*16);
+    const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
+    const lp=new T.Mesh(new T.PlaneGeometry(topW,topD),new T.MeshStandardMaterial({map:tex,transparent:true,roughness:.86,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));
+    lp.rotation.x=-Math.PI/2;lp.position.set(0,h+.95,-1.1);cap.add(lp);
+    const lg={ctx:cv.getContext("2d"),cv,tex,k};legs.push(lg);drawLegend(lg);
+    // South-facing LED: soft additive glow on the plate that leaks between keycaps
+    const gm=new T.MeshBasicMaterial({map:getGlow(),transparent:true,blending:T.AdditiveBlending,depthWrite:false,color:0x000000});
+    const gl=new T.Mesh(new T.PlaneGeometry(k.w*U+9,U+9),gm);gl.rotation.x=-Math.PI/2;gl.position.set(x,PLATE+1.25,z);kb.add(gl);glows.push(gm);
+  });
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{legs.forEach(drawLegend);b.update(performance.now()/1000);});
+  const INIT=new T.Vector3(0,.8,.6).normalize();
+  cam.position.copy(controls.target).add(INIT);
+  function fit(reset){const w=el.clientWidth,h=el.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();
+    const t=Math.tan(cam.fov*Math.PI/360),d=Math.max(192/(t*cam.aspect),80/t);
+    const dir=reset?INIT.clone():cam.position.clone().sub(controls.target).normalize();cam.position.copy(controls.target).addScaledVector(dir,d);controls.update();}
+  // Click a keycap to press it (ignored if the pointer moved, so drags still rotate)
+  const ray=new T.Raycaster(),mv=new T.Vector2();let down=null;
+  renderer.domElement.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY];});
+  renderer.domElement.addEventListener("pointerup",e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>4)return;const r=renderer.domElement.getBoundingClientRect();
+    mv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mv,cam);const hit=ray.intersectObjects(caps,false)[0];if(hit)press(hit.object.userData.id,true);});
+  const b={el,kind:"3d",
+    update(now){if(!el.clientWidth)return;const eff=S.preview??S.effect,slot=S.slots[eff];
+      for(let i=0;i<KEYS.length;i++){const [h,a]=lightFor(eff,slot,KEYS[i],now),c=hsl(h);
+        glows[i].color.setRGB(c[0]/255,c[1]/255,c[2]/255).convertSRGBToLinear().multiplyScalar(a*2.2);
+        caps[i].material.emissive.copy(glows[i].color).multiplyScalar(.05);
+        const dt=now-pressT[i],f=dt<0?0:dt<.05?dt/.05:Math.max(0,1-(dt-.05)/.14);caps[i].position.y=CAPY-3.6*f;}
+      controls.update();renderer.render(scene,cam);},
+    press(i){pressT[i]=performance.now()/1000;},
+    reset(){fit(true);},
+    applyCW(){const C=CW[cwName];caseMat.color.setHex(C.c);caps.forEach((c,i)=>c.material.color.setHex(C[role(KEYS[i].id)]));legs.forEach(drawLegend);}};
+  controls.addEventListener("change",()=>{if(RM)b.update(performance.now()/1000);});
+  new ResizeObserver(()=>{const first=!el.dataset.fit;fit(first);el.dataset.fit=1;b.update(performance.now()/1000);}).observe(el);
+  boards.push(b);return b;
+}
+
+const hero=build3D(document.getElementById("heroKb"));
+const macKb=buildKb(document.getElementById("macKb"));
+const mac3=build3D(document.getElementById("macKb3"));
+const popKb=buildKb(document.getElementById("popKb"),{panel:"p-b"});
+let webKb=null;
+
+// ---------- Press handling ----------
+let lastReal=-10;
+function press(id,real){const k=BY[id];if(!k)return;const now=performance.now()/1000;presses.push({x:k.cx,y:k.cy,t:now,id});if(presses.length>30)presses.shift();
+  if(real){lastReal=now;boards.forEach(b=>{if(b.press){b.press(k.i);return;}const e=b.els[k.i];e.classList.add("pressed");setTimeout(()=>e.classList.remove("pressed"),120);});repaintStill();}}
+document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("select,input,textarea,#tui"))return;const id=CODE[e.code];if(id)press(id,true);});
+
+// ---------- Animation loop ----------
+let lastSim=0,lastTui=0;
+function visible(b){return b.el.offsetParent!==null;}
+function frame(ms){const now=ms/1000;
+  const eff=S.preview??S.effect;
+  if([4,7,9,12].includes(eff)&&now-lastReal>3&&now-lastSim>.45){lastSim=now;press(KEYS[Math.random()*KEYS.length|0].id,false);}
+  boards.forEach(b=>{if(visible(b))paint(b,now);});
+  if(!document.getElementById("p-d").hidden&&now-lastTui>.05){lastTui=now;drawTui(now);}
+  if(!RM)requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const repaintStill=()=>{if(RM){const now=performance.now()/1000;boards.forEach(b=>{if(visible(b))paint(b,now);});if(!document.getElementById("p-d").hidden)drawTui(now);}};
+
+// ---------- Direction tabs ----------
+const dtabs=[...document.querySelectorAll(".dir")];
+dtabs.forEach(t=>t.addEventListener("click",()=>{dtabs.forEach(x=>{const on=x===t;x.setAttribute("aria-selected",on);document.getElementById(x.getAttribute("aria-controls")).hidden=!on;});
+  try{localStorage.setItem("f65dir",t.id);}catch(e){} repaintStill();}));
+try{const s=localStorage.getItem("f65dir");if(s&&document.getElementById(s))document.getElementById(s).click();}catch(e){}
+
+// ---------- Write progress ----------
+function stamp(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `f65-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.txt`;}
+let writing=false;
+function runWrite(statusEl,n,what,done){
+  if(writing)return;writing=true;
+  statusEl.innerHTML=`<span>Backing up current settings…</span>`;
+  setTimeout(()=>{statusEl.innerHTML=`<span>Writing ${what}</span><span class="packets">${"<i></i>".repeat(n)}</span><span class="cnt" style="font-variant-numeric:tabular-nums">0/${n}</span>`;
+    const segs=[...statusEl.querySelectorAll(".packets i")],cnt=statusEl.querySelector(".cnt");let i=0;
+    const step=()=>{if(i>=n){writing=false;statusEl.innerHTML=`<span class="tick">✓ Saved to keyboard</span><span>Backup ${stamp()}</span>`;done&&done();return;}
+      if(Math.random()<.07&&!segs[i].dataset.r){segs[i].dataset.r=1;segs[i].classList.add("retry");setTimeout(step,RM?0:160);return;}
+      segs[i].classList.remove("retry");segs[i].classList.add("ack");i++;cnt.textContent=`${i}/${n}`;setTimeout(step,RM?0:45);};
+    step();},RM?0:350);
+}
+
+// ---------- Mac app: lighting ----------
+const macStatus=document.getElementById("macStatus");
+const segBri=document.getElementById("segBri"),segSpd=document.getElementById("segSpd"),sw=document.getElementById("sw"),fxGrid=document.getElementById("fxGrid");
+for(let v=0;v<=4;v++){segBri.insertAdjacentHTML("beforeend",`<button data-v="${v}">${v}</button>`);segSpd.insertAdjacentHTML("beforeend",`<button data-v="${v}">${v}</button>`);}
+CNAME.forEach((c,ix)=>{const bg=ix===7?"conic-gradient(red,yellow,lime,cyan,blue,magenta,red)":`hsl(${HUES[ix]} 90% 55%)`;sw.insertAdjacentHTML("beforeend",`<button class="sw" data-v="${ix}" aria-label="${c}" title="${c}" style="background:${bg}"></button>`);});
+const FXBG=["#6b7bd8","radial-gradient(circle,#6b7bd8,#1d2233)","linear-gradient(90deg,red,yellow,lime,cyan,blue,magenta)","linear-gradient(90deg,#1d2233,#fff 50%,#1d2233)","radial-gradient(circle at 30% 40%,#8af 0 10%,transparent 12%),radial-gradient(circle at 70% 60%,#8af 0 10%,transparent 12%),#1d2233","conic-gradient(red,yellow,lime,cyan,blue,magenta,red)","repeating-radial-gradient(circle,#8af 0 3px,#1d2233 3px 9px)","radial-gradient(circle at 20% 30%,#fff 0 3%,transparent 4%),radial-gradient(circle at 70% 70%,#fff 0 3%,transparent 4%),#1d2233","radial-gradient(circle,#1d2233 0 25%,#6b7bd8 30%)","linear-gradient(90deg,#1d2233 0 30%,#5f8 30% 60%,#1d2233 60%)","linear-gradient(90deg,#f0f,#0ff)","radial-gradient(circle,#fff 0 18%,#1d2233 22%)","repeating-linear-gradient(90deg,#6b7bd8 0 10px,#1d2233 10px 20px)","linear-gradient(90deg,#1d2233 0 40%,#8af 50%,#1d2233 60%)","conic-gradient(#8af 0 45deg,#1d2233 0 90deg,#8af 0 135deg,#1d2233 0 180deg,#8af 0 225deg,#1d2233 0 270deg,#8af 0 315deg,#1d2233 0)","linear-gradient(180deg,red,yellow,lime,cyan)","radial-gradient(circle,#f6a,#a6f,#6af)","linear-gradient(120deg,#1d2233 40%,#fff 45%,#1d2233 50%)"];
+EFFECTS.forEach((e,ix)=>{fxGrid.insertAdjacentHTML("beforeend",`<button data-e="${ix+1}"><i style="background:${FXBG[ix]}"></i><span>${ENAME[ix]}</span></button>`);});
+function syncLight(){const s=cur();document.getElementById("effName").textContent=ENAME[S.effect-1];
+  segBri.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===s.bri));
+  segSpd.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===s.spd));
+  sw.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===s.col));
+  fxGrid.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.e===S.effect));
+  document.querySelectorAll("#qfx button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.e===S.effect));
+  document.querySelectorAll("#popBri button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===s.bri));
+  const hf=document.getElementById("heroFx");if(hf)hf.value=S.effect;
+  syncWeb();repaintStill();}
+segBri.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cur().bri=+b.dataset.v;syncLight();runWrite(macStatus,10,"lighting");});
+segSpd.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cur().spd=+b.dataset.v;syncLight();runWrite(macStatus,10,"lighting");});
+sw.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cur().col=+b.dataset.v;syncLight();runWrite(macStatus,10,"lighting");});
+fxGrid.addEventListener("mouseover",e=>{const b=e.target.closest("button");if(b){S.preview=+b.dataset.e;repaintStill();}});
+fxGrid.addEventListener("mouseleave",()=>{S.preview=null;repaintStill();});
+fxGrid.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.effect=+b.dataset.e;S.preview=null;syncLight();runWrite(macStatus,10,"lighting");});
+
+// ---------- Mac app: sections ----------
+const secs={light:"secLight",keys:"secKeys",macros:"secMacros",device:"secDevice"};
+let layer=0,selKey=null;
+document.querySelectorAll(".side button").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll(".side button").forEach(b=>b.setAttribute("aria-selected",b===btn));
+  const s=btn.dataset.sec;Object.entries(secs).forEach(([k,v])=>document.getElementById(v).hidden=k!==s);
+  document.getElementById("inspLight").hidden=s!=="light";document.getElementById("inspKeys").hidden=s!=="keys";
+  document.getElementById("macKb").closest(".mrow").hidden=(s==="macros"||s==="device");
+  document.getElementById("macKb").hidden=s!=="keys";document.getElementById("macKb3").hidden=s==="keys";
+  document.getElementById("macKb").classList.toggle("pick",s==="keys");
+  document.getElementById("macKb").classList.toggle("fnlayer",s==="keys"&&layer===1);
+  if(s!=="keys")clearSel();}));
+document.getElementById("segLayer").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;layer=+b.dataset.l;
+  document.querySelectorAll("#segLayer button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  document.getElementById("macKb").classList.toggle("fnlayer",layer===1);if(selKey)showKey(selKey);});
+function clearSel(){macKb.els.forEach(e=>e.classList.remove("sel"));selKey=null;}
+const OPTS=["none","esc","tab","caps","enter","space","backspace","delete","up","down","left","right","pgup","pgdn","home","end",..."abcdefghijklmnopqrstuvwxyz".split(""),..."1234567890".split(""),...Array.from({length:12},(_,i)=>"f"+(i+1)),"lctrl","lshift","lalt","lcmd","rctrl","rshift","ralt","rcmd","mute","volup","voldown","play","next","prev"];
+const remapped={};
+function showKey(id){const k=BY[id];const d=document.getElementById("kdetail");
+  const isFn=layer===1;const fn=FN[id];
+  const now=isFn?(fn?fn[2]:"Nothing (passes through base)"):(remapped[id]?remapped[id]:(k.label||"Space"));
+  const raw=isFn?(fn?fn[1]:"00 00 00 00"):HIDBASE(id);
+  d.innerHTML=`<div><b style="font-size:14px">${k.label||"Space"}</b> <span class="muted">on the ${isFn?"Fn layer":"base layer"}</span></div>
+   <div>Sends: <b>${now}</b><div class="raw">${raw}</div></div>
+   ${id==="fn"?`<span class="muted">The Fn key can't be remapped.</span>`:`<div><label for="remapTo">Change to</label><select id="remapTo">${OPTS.map(o=>`<option>${o}</option>`).join("")}</select></div>
+   <button class="btn" id="remapGo">Remap key</button>`}`;
+  const go=document.getElementById("remapGo");if(go)go.onclick=()=>{const to=document.getElementById("remapTo").value;go.disabled=true;
+    runWrite(macStatus,36,`${isFn?"Fn":"base"} layer`,()=>{if(!isFn){remapped[id]=to;const lg=macKb.els[k.i].querySelector(".lg");const el=macKb.els[k.i];el.classList.remove("flip");void el.offsetWidth;el.classList.add("flip");setTimeout(()=>lg.textContent=to==="none"?"—":to.length===1?to.toUpperCase():to[0].toUpperCase()+to.slice(1),170);}
+      else{FN[id]=[to,"…",to];const el=macKb.els[k.i];el.classList.add("hasfn");let fl=el.querySelector(".fl");if(!fl){el.insertAdjacentHTML("beforeend",`<span class="fl"></span>`);fl=el.querySelector(".fl");}
+        el.classList.remove("flip");void el.offsetWidth;el.classList.add("flip");setTimeout(()=>fl.textContent=to,170);}
+      showKey(id);});};}
+document.getElementById("macKb").addEventListener("click",e=>{if(!e.currentTarget.classList.contains("pick"))return;const k=e.target.closest(".k");if(!k)return;
+  clearSel();k.classList.add("sel");selKey=k.dataset.id;showKey(selKey);});
+const BK=["022426","022435","022450","022451","022630","022902","022946","023008","023015"];
+document.getElementById("backups").innerHTML=BK.slice().reverse().map((t,i)=>`<div><span>Restore point ${t.slice(0,2)}:${t.slice(2,4)}:${t.slice(4)}${i===0?' <span class="chip">latest</span>':""}</span><span class="v">f65-20261117-${t}.txt</span><button class="btn ghost" data-t="${t}">Restore</button></div>`).join("");
+document.getElementById("backups").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;runWrite(macStatus,10+36+36,`restore point ${b.dataset.t}`);});
+
+// ---------- Menu bar ----------
+const pop=document.getElementById("pop"),mb=document.getElementById("mbIcon");
+mb.addEventListener("click",()=>{const open=pop.classList.toggle("closed");mb.setAttribute("aria-expanded",!open);});
+const QF=[1,2,3,7,11,12];
+document.getElementById("qfx").innerHTML=QF.map(e=>`<button data-e="${e}">${ENAME[e-1]}</button>`).join("");
+document.getElementById("qfx").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.effect=+b.dataset.e;syncLight();});
+const popBri=document.getElementById("popBri");for(let v=0;v<=4;v++)popBri.insertAdjacentHTML("beforeend",`<button data-v="${v}">${v}</button>`);
+popBri.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cur().bri=+b.dataset.v;syncLight();});
+
+// ---------- Browser / WebHID ----------
+const web=document.getElementById("web");let webState="connected";
+function renderWeb(){
+  if(webState!=="connected"){webKb&&boards.splice(boards.indexOf(webKb),1);webKb=null;
+    web.innerHTML=`<div class="connect"><h3>Configure your AULA F65</h3><p class="muted" style="max-width:44ch">Plug in the 2.4G receiver or the USB cable, then pick the keyboard. Chrome asks once per device.</p><button class="btn" id="wConnect">Connect keyboard</button></div>`+
+      (webState==="choose"?`<div class="chooser" role="dialog" aria-label="Device chooser"><b>localhost:5173 wants to connect to a HID device</b><div class="dev">2.4G Wireless Receiver</div><div class="acts"><button class="btn ghost" id="wCancel">Cancel</button><button class="btn" id="wPick">Connect</button></div></div>`:"");
+    document.getElementById("wConnect").onclick=()=>{webState="choose";renderWeb();};
+    if(webState==="choose"){document.getElementById("wCancel").onclick=()=>{webState="idle";renderWeb();};document.getElementById("wPick").onclick=()=>{webState="connected";renderWeb();};}
+    return;}
+  web.innerHTML=`<div class="webtop"><h3>AULA F65</h3><span class="pill ok">Connected over WebHID</span><button class="btn ghost" id="wReplay" style="margin-left:auto">Replay connect flow</button></div>
+   <div class="kb" id="webKb"></div>
+   <div class="toolbar"><div><label class="lbl" for="wEff">Effect</label><select id="wEff">${ENAME.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}</select></div>
+   <div><span class="lbl">Brightness</span><div class="seg" id="wBri" style="min-width:170px">${[0,1,2,3,4].map(v=>`<button data-v="${v}">${v}</button>`).join("")}</div></div>
+   <div><label class="lbl" for="wCol">Colour</label><select id="wCol">${CNAME.map((n,i)=>`<option value="${i}">${n}</option>`).join("")}</select></div>
+   <button class="btn" id="wSave">Save to keyboard</button></div>
+   <div class="status" id="wStatus" style="border-radius:8px;border:1px solid var(--line)"><span>Changes preview here until you save.</span></div>`;
+  webKb=buildKb(document.getElementById("webKb"),{panel:"p-c"});
+  document.getElementById("wReplay").onclick=()=>{webState="idle";renderWeb();};
+  document.getElementById("wEff").onchange=e=>{S.effect=+e.target.value;syncLight();};
+  document.getElementById("wCol").onchange=e=>{cur().col=+e.target.value;syncLight();};
+  document.getElementById("wBri").onclick=e=>{const b=e.target.closest("button");if(!b)return;cur().bri=+b.dataset.v;syncLight();};
+  document.getElementById("wSave").onclick=()=>runWrite(document.getElementById("wStatus"),10,"lighting over WebHID");
+  syncWeb();}
+function syncWeb(){const e=document.getElementById("wEff");if(!e)return;e.value=S.effect;document.getElementById("wCol").value=cur().col;
+  document.querySelectorAll("#wBri button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===cur().bri));}
+renderWeb();
+
+// ---------- Terminal UI ----------
+const tui=document.getElementById("tui");
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function bar(v){return "▮".repeat(v)+"<span class='tdim'>"+"▯".repeat(4-v)+"</span>";}
+function drawTui(now){const eff=S.preview??S.effect,s=S.slots[eff];
+  let out=`<span class="tacc">f65 ui</span>  <span class="tdim">2.4G receiver 3554:FA09</span>  <span class="tok">● online</span>\n\n`;
+  for(let y=0;y<5;y++){let line="";KEYS.filter(k=>k.y===y).forEach(k=>{const w=Math.round(k.w*4);const lbl=(k.label||"").slice(0,w-1);const pad=w-lbl.length;
+    line+=`<span class="tk" style="width:${w}ch;background:${colorFor(eff,s,k,now)}">${esc(" ".repeat(pad>>1)+lbl+" ".repeat(pad-(pad>>1)))}</span>`;});out+=line+"\n";}
+  out+=`\n effect     <span class="tacc">◂ ${ENAME[eff-1].padEnd(14)}▸</span>  ${String(eff).padStart(2)}/18\n brightness ${bar(s.bri)}   speed ${bar(s.spd)}   colour <span class="tacc">${CNAME[s.col]}</span>\n\n<span class="tdim"> ←/→ effect   ↑/↓ brightness   s speed   c colour   w write   k keys   q quit</span>`;
+  tui.innerHTML=out;}
+tui.addEventListener("keydown",e=>{const s=cur();let used=true;
+  if(e.key==="ArrowRight")S.effect=S.effect%18+1;else if(e.key==="ArrowLeft")S.effect=(S.effect+16)%18+1;
+  else if(e.key==="ArrowUp")s.bri=Math.min(4,s.bri+1);else if(e.key==="ArrowDown")s.bri=Math.max(0,s.bri-1);
+  else if(e.key==="s")s.spd=(s.spd+1)%5;else if(e.key==="c")s.col=(s.col+1)%8;else used=false;
+  if(used){e.preventDefault();syncLight();drawTui(performance.now()/1000);}});
+
+// ---------- Motion demos ----------
+const pk=document.getElementById("demoPk");pk.innerHTML="<i></i>".repeat(10);
+document.getElementById("demoPkBtn").onclick=()=>{const wrap=document.createElement("div");wrap.className="status";wrap.style.cssText="background:none;border:0;padding:0;justify-content:center";
+  pk.replaceWith(wrap);wrap.id="demoPk";document.getElementById("demoPkTxt").textContent="";runWrite(wrap,10,"lighting");};
+const ghost=document.getElementById("ghost"),gtxt=document.getElementById("ghostTxt"),gbtn=document.getElementById("ghostBtn");
+gbtn.onclick=()=>{if(ghost.classList.contains("waiting")){ghost.classList.remove("waiting");gtxt.textContent="Keyboard connected";gtxt.style.color="var(--ok)";gbtn.textContent="Put it to sleep";}
+  else{ghost.classList.add("waiting");gtxt.textContent="Press any key on the F65 to wake it";gtxt.style.color="";gbtn.textContent="Simulate wake";}};
+const fk=document.getElementById("flipKey"),fl=document.getElementById("flipLbl"),fb=document.getElementById("flipBtn");
+fk.style.transition="none";
+fb.onclick=()=>{const to=fl.textContent==="Caps"?"Ctrl":"Caps";fk.classList.remove("flip");void fk.offsetWidth;fk.classList.add("flip");
+  fk.style.animation=RM?"none":"flip .34s cubic-bezier(.3,.7,.3,1)";setTimeout(()=>{fl.textContent=to;fb.textContent="Remap to "+(to==="Caps"?"Ctrl":"Caps");},RM?0:170);
+  setTimeout(()=>fk.style.animation="",360);};
+document.getElementById("layerBtn").onclick=e=>{const r=document.getElementById("layerRow");const on=r.classList.toggle("fn");e.target.textContent=on?"Show base layer":"Show Fn layer";};
+
+// ---------- Hero controls ----------
+const hfx=document.getElementById("heroFx");hfx.innerHTML=ENAME.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("");
+hfx.onchange=()=>{S.effect=+hfx.value;syncLight();};
+document.getElementById("cw").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cwName=b.dataset.c;
+  document.querySelectorAll("#cw button").forEach(x=>x.setAttribute("aria-pressed",x===b));boards.forEach(x=>x.applyCW&&x.applyCW());repaintStill();});
+document.getElementById("resetView").onclick=()=>{boards.forEach(x=>x.reset&&x.reset());repaintStill();};
+
+syncLight();
+if(RM)repaintStill();
+})();
+</script>
