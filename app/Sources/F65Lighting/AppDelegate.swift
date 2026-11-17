@@ -2,13 +2,16 @@ import F65Kit
 // Menu-bar UI.
 
 import AppKit
+import SwiftUI
 import ServiceManagement
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let engine = Engine()
+    private lazy var model = AppModel(service: engine)
+    private var mainWindow: MainWindow?
     private let defaults = UserDefaults.standard
-    private var settings = Settings()
+    private var settings = F65Kit.Settings()
     private var status = EngineStatus()
 
     private var statusItem: NSStatusItem!
@@ -37,6 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         loadSettings()
+        model.live = settings
+        model.onLive = { [weak self] value in self?.settings = value; self?.apply() }
+        model.onLogin = { [weak self] in self?.toggleLogin() }
+        model.onEditLayout = { [weak self] in self?.editLayout() }
+        model.onReloadLayout = { [weak self] in self?.reloadLayout() }
         buildMenu()
 
         engine.onStatus = { [weak self] s in
@@ -58,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             MainActor.assumeIsolated { self?.checkLayoutFile() }
         }
         refreshMenu()
+        openMainWindow()
     }
 
     // MARK: Settings
@@ -79,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defaults.set(settings.brightness, forKey: "brightness")
         defaults.set(settings.paused, forKey: "paused")
         defaults.set(settings.pref.rawValue, forKey: "connection")
+        model.live = settings
         engine.update(settings)
         refreshMenu()
     }
@@ -99,6 +109,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusLine.isEnabled = false
         hintLine.isEnabled = false
         hintLine.isHidden = true
+        let open = NSMenuItem(title: "Open F65…", action: #selector(openMainWindow), keyEquivalent: "o")
+        open.target = self
+        menu.addItem(open)
+        menu.addItem(.separator())
         menu.addItem(statusLine)
         menu.addItem(hintLine)
         menu.addItem(.separator())
@@ -332,5 +346,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshMenu()
     }
 
+    @objc private func openMainWindow() {
+        if mainWindow == nil { mainWindow = MainWindow(model: model) }
+        mainWindow?.open()
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { openMainWindow(); return true }
+    func applicationWillTerminate(_ notification: Notification) { engine.stop() }
     @objc private func quit() { NSApp.terminate(nil) }
 }
