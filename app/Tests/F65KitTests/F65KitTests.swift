@@ -99,3 +99,35 @@ final class F65KitTests: XCTestCase {
         for r in p {XCTAssertEqual(r.count,20);XCTAssertEqual(r[19],ReceiverProtocol.checksum(r))}
     }
 }
+
+final class DeviceServiceTests: XCTestCase {
+    func testSerializedTransactionsAndFreshBackups() throws {
+        let m=MockTransport();let dir=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store=BackupStore(directory:dir);let service=DeviceService(mock:m,backups:store)
+        defer {service.stop();try? FileManager.default.removeItem(at:dir)}
+        let done=expectation(description:"Both edits verified");done.expectedFulfillmentCount=2
+        service.perform(.effect(11)){r in if case .failure(let e)=r{XCTFail(e.localizedDescription)};done.fulfill()}
+        service.perform(.lighting("brightness",1)){r in if case .failure(let e)=r{XCTFail(e.localizedDescription)};done.fulfill()}
+        wait(for:[done],timeout:5)
+        let led=try LightingBlock(m.read(0x44));XCTAssertEqual(led.effect,11);XCTAssertEqual(led.brightness(11),1)
+        XCTAssertEqual(store.list().count,2);XCTAssertEqual(m.liveFrames,0)
+    }
+    func testFailedRestoreRevertsEarlierBlocks() throws {
+        let m=MockTransport();let original=try Snapshot(m);var led=original.lighting;try led.setEffect(11)
+        var palette=original.palette;try palette.set(0,.black)
+        m.failWrites=[2,3]
+        let dir=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let service=DeviceService(mock:m,backups:BackupStore(directory:dir));defer{service.stop();try? FileManager.default.removeItem(at:dir)}
+        let done=expectation(description:"Restore reverted")
+        service.perform(.restore([.init(cmd:0x44,sub:0,bytes:led.bytes),.init(cmd:0x49,sub:0,bytes:palette.bytes)])){r in
+            guard case .failure(let error)=r,case F65Error.verifyFailed(let rolled,_)=error else{XCTFail();done.fulfill();return};XCTAssertTrue(rolled);done.fulfill()
+        }
+        wait(for:[done],timeout:5);XCTAssertEqual(try Snapshot(m),original)
+    }
+    func testHiddenRowsMaskedAfterRemap() {
+        var s=Settings();s.mode = .solid
+        let f=FrameRenderer.render(s,map:KeyMap.fallback,time:0,receiver:false)
+        for slot in stride(from:0,to:126,by:6) {XCTAssertEqual(f[slot],.black)}
+        XCTAssertEqual(f[75],.black);XCTAssertNotEqual(f[9],.black)
+    }
+}
