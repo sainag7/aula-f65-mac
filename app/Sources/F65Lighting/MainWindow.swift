@@ -67,6 +67,7 @@ struct MainView:View {
     }
     @ViewBuilder var sectionContent:some View {
         if model.section=="Lighting" {LightingView(model:model)}
+        else if model.section=="Keys" {KeysView(model:model)}
         else {KeyboardView(model:model).frame(height:340)}
     }
 }
