@@ -66,7 +66,7 @@ struct MainView:View {
         }.frame(minWidth:980,minHeight:650)
     }
     @ViewBuilder var sectionContent:some View {
-        KeyboardView(model:model).frame(height:340)
-        Text("Preview is approximate. Speed direction is unconfirmed.").font(.caption).foregroundStyle(.secondary)
+        if model.section=="Lighting" {LightingView(model:model)}
+        else {KeyboardView(model:model).frame(height:340)}
     }
 }
