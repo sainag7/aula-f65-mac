@@ -8,22 +8,13 @@ private final class HIDInbox: PacketChannel {
     let condition=NSCondition()
     var packets:[[UInt8]]=[]
     var statusChanged=false
-    let buffer=UnsafeMutablePointer<UInt8>.allocate(capacity:64)
-    init(_ device:IOHIDDevice) {
-        self.device=device
-        IOHIDDeviceRegisterInputReportCallback(device,buffer,64,{ctx,_,_,_,id,p,n in
-            guard let ctx else {return};let me=Unmanaged<HIDInbox>.fromOpaque(ctx).takeUnretainedValue()
-            var bytes=Array(UnsafeBufferPointer(start:p,count:n))
-            if bytes.first != UInt8(id) {bytes.insert(UInt8(id),at:0)}
-            me.condition.lock()
-            if bytes.count==20,bytes[0]==0x13,ReceiverProtocol.checksum(bytes)==bytes[19] {
-                if bytes[1]==0x0a {me.statusChanged=true} else {me.packets.append(bytes);if me.packets.count>256 {me.packets.removeFirst()}}
-                me.condition.signal()
-            }
-            me.condition.unlock()
-        },Unmanaged.passUnretained(self).toOpaque())
+    init(_ device:IOHIDDevice) { self.device=device }
+    func accept(_ bytes:[UInt8]) {
+        condition.lock();defer { condition.unlock() }
+        guard bytes.count==20,bytes[0]==0x13,ReceiverProtocol.checksum(bytes)==bytes[19] else { return }
+        if bytes[1]==0x0a {statusChanged=true} else {packets.append(bytes);if packets.count>256 {packets.removeFirst()}}
+        condition.signal()
     }
-    deinit {buffer.deallocate()}
     func send(_ p:[UInt8]) throws {
         let r=p.withUnsafeBufferPointer {IOHIDDeviceSetReport(device,kIOHIDReportTypeOutput,0x13,$0.baseAddress!,p.count)}
         try HIDHub.check(r)
@@ -44,7 +35,8 @@ public final class HIDHub {
     private var current:IOHIDDevice?
     private var transport:Transport?
     // Keep callback contexts alive until shutdown; hot-plug may have queued callbacks.
-    private var inboxes:[HIDInbox]=[]
+    private var inboxes:[IOHIDDevice:HIDInbox]=[:]
+    private let cancelled=DispatchSemaphore(value:0)
     private var inbox:HIDInbox?
     public init() {}
     public func start() {
@@ -53,7 +45,18 @@ public final class HIDHub {
         let ctx=Unmanaged.passUnretained(self).toOpaque()
         IOHIDManagerRegisterDeviceMatchingCallback(m,{ctx,_,_,d in let h=Unmanaged<HIDHub>.fromOpaque(ctx!).takeUnretainedValue();h.lock.lock();h.devices.insert(d);h.lock.unlock()},ctx)
         IOHIDManagerRegisterDeviceRemovalCallback(m,{ctx,_,_,d in let h=Unmanaged<HIDHub>.fromOpaque(ctx!).takeUnretainedValue();h.lock.lock();h.devices.remove(d);h.lock.unlock()},ctx)
-        IOHIDManagerSetDispatchQueue(m,callbacks);IOHIDManagerActivate(m);manager=m
+        // Register before activation, as required by IOHIDManager's dispatch API.
+        IOHIDManagerRegisterInputReportCallback(m,{ctx,_,sender,_,id,p,n in
+            guard let ctx,let sender else{return}
+            let h=Unmanaged<HIDHub>.fromOpaque(ctx).takeUnretainedValue()
+            let d=Unmanaged<IOHIDDevice>.fromOpaque(sender).takeUnretainedValue()
+            h.lock.lock();let inbox=h.inboxes[d];h.lock.unlock()
+            var bytes=Array(UnsafeBufferPointer(start:p,count:n));if bytes.first != UInt8(id){bytes.insert(UInt8(id),at:0)}
+            inbox?.accept(bytes)
+        },ctx)
+        IOHIDManagerSetDispatchQueue(m,callbacks)
+        IOHIDManagerSetCancelHandler(m,{[cancelled] in cancelled.signal()})
+        IOHIDManagerActivate(m);manager=m
     }
     private func kind(_ d:IOHIDDevice)->LinkKind? {
         func p(_ k:String)->Int {IOHIDDeviceGetProperty(d,k as CFString) as? Int ?? 0}
@@ -73,12 +76,12 @@ public final class HIDHub {
                 try Self.check(p.withUnsafeMutableBufferPointer {IOHIDDeviceGetReport(d,kIOHIDReportTypeFeature,6,$0.baseAddress!,&n)})
                 return Array(p.prefix(n))
             })
-        } else {let box=HIDInbox(d);inboxes.append(box);inbox=box;t=ReceiverTransport(box)}
+        } else {let box=HIDInbox(d);lock.lock();inboxes[d]=box;lock.unlock();inbox=box;t=ReceiverTransport(box)}
         transport=t;return t
     }
     public func statusChanged()->Bool {inbox?.takeStatus() ?? false}
     public func disconnect() {
-        if let d=current {if let inbox { IOHIDDeviceRegisterInputReportCallback(d,inbox.buffer,64,nil,nil) };IOHIDDeviceClose(d,0)}
+        if let d=current {IOHIDDeviceClose(d,0)}
         current=nil;transport=nil;inbox=nil
     }
     public static func check(_ r:IOReturn) throws {
@@ -87,5 +90,5 @@ public final class HIDHub {
         throw F65Error.invalid(String(format:"HID I/O failed (0x%08x).",UInt32(bitPattern:r)))
     }
     // Owned for the app lifetime. Stop after the worker is quiescent.
-    public func stop() {disconnect();if let m=manager {IOHIDManagerCancel(m);callbacks.sync {};manager=nil}}
+    public func stop() {disconnect();if let m=manager {IOHIDManagerCancel(m);cancelled.wait();manager=nil;lock.lock();inboxes=[:];lock.unlock()}}
 }

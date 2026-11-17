@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ note: Notification) {
         // One instance only: two would fight over the keyboard.
         let me = NSRunningApplication.current
-        if let id = Bundle.main.bundleIdentifier,
+        if !engine.isMock, let id = Bundle.main.bundleIdentifier,
            NSRunningApplication.runningApplications(withBundleIdentifier: id).contains(where: { $0 != me }) {
             NSApp.terminate(nil)
             return
@@ -67,6 +67,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         refreshMenu()
         openMainWindow()
+        if engine.isMock, ProcessInfo.processInfo.environment["F65_SMOKE"] == "1", let window=mainWindow {
+            Task { await SmokeTest.run(model:model,window:window) }
+        }
     }
 
     // MARK: Settings

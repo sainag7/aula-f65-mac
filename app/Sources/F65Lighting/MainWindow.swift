@@ -8,7 +8,7 @@ import F65Kit
         self.model=model
         let window=NSWindow(contentRect:NSRect(x:0,y:0,width:1160,height:780),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
         window.title="F65";window.minSize=NSSize(width:980,height:650);window.isReleasedWhenClosed=false
-        super.init(window:window);window.delegate=self;window.contentView=NSHostingView(rootView:MainView(model:model));window.center();window.setFrameAutosaveName("F65Main")
+        super.init(window:window);window.delegate=self;window.contentView=NSHostingView(rootView:MainView(model:model).defaultAppStorage(model.preferences));window.center();window.setFrameAutosaveName("F65Main")
     }
     required init?(coder:NSCoder){fatalError("init(coder:) has not been implemented")}
     func open(){NSApp.setActivationPolicy(.regular);showWindow(nil);window?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true);model.active=true}

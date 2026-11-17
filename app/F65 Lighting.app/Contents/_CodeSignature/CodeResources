@@ -3,9 +3,66 @@
 <plist version="1.0">
 <dict>
 	<key>files</key>
-	<dict/>
+	<dict>
+		<key>Resources/keyboard/index.html</key>
+		<data>
+		M0+Osq394vOgn1pl+5AeHacsZ1E=
+		</data>
+		<key>Resources/keyboard/vendor/LICENSE</key>
+		<data>
+		sKR4jeGpAoNPeujIxICMqEonmiQ=
+		</data>
+		<key>Resources/keyboard/vendor/OrbitControls.js</key>
+		<data>
+		A14hbHu4hRusW8V5mh17MjBOPgE=
+		</data>
+		<key>Resources/keyboard/vendor/RoomEnvironment.js</key>
+		<data>
+		iK9GikJCVUf9BPcOGWU2EBRPZAg=
+		</data>
+		<key>Resources/keyboard/vendor/three.min.js</key>
+		<data>
+		kSvHwVAFXNMk3+4P8kPKt058ZgY=
+		</data>
+	</dict>
 	<key>files2</key>
-	<dict/>
+	<dict>
+		<key>Resources/keyboard/index.html</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			yQCqxt+PBgIWY7qD6NHBQzY6kOkE19zd3oa9Gux9LOA=
+			</data>
+		</dict>
+		<key>Resources/keyboard/vendor/LICENSE</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			+/OUOTDay/Vqq7jcXYFkQL0Wqm9Mx43b3xIQbuGAeDI=
+			</data>
+		</dict>
+		<key>Resources/keyboard/vendor/OrbitControls.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			tMblP5hThTWxH9ZlVifUf7WHezrZclaL/wpwJsS21cQ=
+			</data>
+		</dict>
+		<key>Resources/keyboard/vendor/RoomEnvironment.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			JRtOd5q7W0MvmaMmh4/iOXR8H+VfOQkzCF/D3rINLOo=
+			</data>
+		</dict>
+		<key>Resources/keyboard/vendor/three.min.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			80RGv4dbX7Dc2TgZ/+HZ4YLUZjTuhV9dkExsSsfNvJU=
+			</data>
+		</dict>
+	</dict>
 	<key>rules</key>
 	<dict>
 		<key>^Resources/</key>

@@ -31,6 +31,7 @@ public final class BackupStore {
 // Backup contents are checked against the fresh previous block before any write is allowed.
 @discardableResult public func safeSave(_ t: Transport, cmd: UInt8, sub: UInt8 = 0, new: [UInt8], old: [UInt8], backup: URL, progress: WriteProgress = {_,_,_ in}) throws -> [UInt8] {
     try Blocks.validate(cmd,sub:sub,new);try Blocks.validate(cmd,sub:sub,old)
+    try validateChanges(cmd:cmd,new:new,old:old)
     let records=try BackupStore().load(backup)
     guard records.contains(where: {$0.cmd==cmd|0x40 && $0.sub==sub && $0.bytes==old}) else { throw F65Error.invalid("Backup does not contain the previous block. Nothing was saved.") }
     if t.kind == .receiver { if try t.read(7,sub:0).first != 1 { throw F65Error.asleep } }
@@ -50,4 +51,18 @@ public final class BackupStore {
     for _ in 0..<2 { if let back=attempt(new,rollback:false) { return back } }
     for _ in 0..<2 { if attempt(old,rollback:true) != nil { throw F65Error.verifyFailed(rolledBack:true,backup:backup) } }
     throw F65Error.verifyFailed(rolledBack:false,backup:backup)
+}
+
+// Reject undecoded writes even when a caller bypasses the native controls.
+public func validateChanges(cmd:UInt8,new:[UInt8],old:[UInt8]) throws {
+    guard new.count==old.count else {throw F65Error.invalid("Block lengths differ.")}
+    for i in new.indices where new[i] != old[i] {
+        if cmd==4 {
+            if i==10 {guard (1...18).contains(new[i]) else{throw F65Error.invalid("Unsupported saved effect.")};continue}
+            guard (0x3a...0x5d).contains(i) else {throw F65Error.invalid("Undecoded lighting bytes cannot be changed.")}
+            if i%2==0 {guard new[i]<=4 else{throw F65Error.invalid("Brightness must be 0–4.")}}
+            else {guard new[i]>>4<=4,new[i]&15<=7 else{throw F65Error.invalid("Invalid speed or colour.")}}
+        }
+        if cmd==9 && i>=483 {throw F65Error.invalid("Palette trailer cannot be changed.")}
+    }
 }

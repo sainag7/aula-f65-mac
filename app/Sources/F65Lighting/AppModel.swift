@@ -4,6 +4,7 @@ import F65Kit
 
 @MainActor final class AppModel: ObservableObject {
     let service:DeviceService
+    var preferences:UserDefaults {service.isMock ? UserDefaults(suiteName:"local.f65.lighting.mock")! : .standard}
     @Published var device=DeviceState()
     @Published var live=F65Kit.Settings()
     @Published var pending=false

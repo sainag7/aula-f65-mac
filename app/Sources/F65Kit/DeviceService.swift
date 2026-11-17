@@ -47,7 +47,7 @@ public final class DeviceService: @unchecked Sendable {
     }
     public var isMock:Bool {mock != nil}
     public func start(with s:Settings) {
-        q.async {self.settings=s;self.hub?.start();let t=DispatchSource.makeTimerSource(queue:self.q);t.schedule(deadline:.now(),repeating:0.05);t.setEventHandler{[weak self] in self?.tick()};self.timer=t;t.resume()}
+        q.async {self.settings=s;self.hub?.start();let t=DispatchSource.makeTimerSource(queue:self.q);t.schedule(deadline:.now(),repeating:0.05);t.setEventHandler{[weak service=self] in service?.tick()};self.timer=t;t.resume()}
     }
     public func update(_ s:Settings) {q.async {if s.pref != self.settings.pref {self.hub?.disconnect();self.transport=nil;self.state.snapshot=nil;self.nextPoll = .distantPast};self.settings=s;self.lastFrame=[];self.publish()}}
     public func setSuspended(_ value:Bool) {q.async {self.suspended=value;self.nextPoll = .distantPast;self.publish();if value {self.deliverFrame(nil)}}}
@@ -94,7 +94,19 @@ public final class DeviceService: @unchecked Sendable {
                     case .remap(let slot,let layer,let entry,let allow):
                         guard layer<=1 else{throw F65Error.invalid("Invalid layer.")}
                         var keys=layer==0 ? before.base:before.fn;try keys.set(slot,entry,allowProtected:allow);records=[.init(cmd:0x41,sub:layer,bytes:keys.bytes)]
-                    case .restore(let r):records=r
+                    case .restore(let r):
+                        records=try r.map { record in
+                            guard let previous=before.records.first(where:{$0.cmd==record.cmd && $0.sub==record.sub}) else {throw F65Error.invalid("Unknown restore block.")}
+                            var safe=record
+                            if record.cmd==0x44 {
+                                try Blocks.validate(4,sub:record.sub,record.bytes)
+                                // Undecoded LED fields are never editable, even via an import.
+                                safe.bytes=previous.bytes
+                                safe.bytes[10]=record.bytes[10]
+                                for e in 1...18 {safe.bytes[0x38+2*e]=record.bytes[0x38+2*e];safe.bytes[0x39+2*e]=record.bytes[0x39+2*e]}
+                            } else if record.cmd==0x49,record.bytes.count==490 {safe.bytes.replaceSubrange(483..<490,with:previous.bytes[483..<490])}
+                            return safe
+                        }
                     default:break
                     }
                     // Validate the entire restore before the first write, including duplicate blocks.
