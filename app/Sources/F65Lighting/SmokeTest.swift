@@ -57,7 +57,10 @@ import F65Kit
                 let saved=model.device.snapshot!;try await edit(model,.backup);let backup=model.service.backups.list()[0];try await edit(model,.effect(1));try await edit(model,.restore(try model.service.backups.load(backup)));try require(model.device.snapshot==saved,"Restore round trip")
                 pass("\(pref.title): 18 effects, every brightness/speed/colour value, palette edit/reset, both-layer remaps and restore")
                 try await edit(model,.effect(1));try await edit(model,.lighting("brightness",4))
-                for mode in [Mode.solid,.wave,.custom] {model.updateLive{$0.mode=mode;$0.paused=false};await pause(0.6);try require(model.frame?.count==126,"Live frame \(mode)");try require(model.frame![0].isBlack,"Hidden LED mask")}
+                for mode in [Mode.solid,.wave,.custom] {model.updateLive{$0.mode=mode;$0.paused=false}
+                    // The 5 s keyboard poll briefly pauses streaming; wait for a frame instead of a fixed delay.
+                    for _ in 0..<30 {await pause(0.1);if model.frame?.count==126 {break}}
+                    try require(model.frame?.count==126,"Live frame \(mode)");try require(model.frame![0].isBlack,"Hidden LED mask")}
                 model.updateLive{$0.paused=true};await pause(0.2);try require(model.frame==nil,"Pause stream")
                 model.updateLive{$0.mode = .off;$0.paused=false};pass("\(pref.title): Solid, Wave, Custom, Pause and Off")
             }
