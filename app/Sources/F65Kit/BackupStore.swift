@@ -29,12 +29,13 @@ public final class BackupStore {
 }
 // Port of f65.swift save(): two attempts, then two verified rollback attempts.
 // Backup contents are checked against the fresh previous block before any write is allowed.
-@discardableResult public func safeSave(_ t: Transport, cmd: UInt8, sub: UInt8 = 0, new: [UInt8], old: [UInt8], backup: URL, progress: WriteProgress = {_,_,_ in}) throws -> [UInt8] {
+/// `checkAwake: false` skips the 2.4G "is the keyboard connected" round trip when the caller has just asked.
+@discardableResult public func safeSave(_ t: Transport, cmd: UInt8, sub: UInt8 = 0, new: [UInt8], old: [UInt8], backup: URL, checkAwake: Bool = true, progress: WriteProgress = {_,_,_ in}) throws -> [UInt8] {
     try Blocks.validate(cmd,sub:sub,new);try Blocks.validate(cmd,sub:sub,old)
     try validateChanges(cmd:cmd,new:new,old:old)
     let records=try BackupStore().load(backup)
     guard records.contains(where: {$0.cmd==cmd|0x40 && $0.sub==sub && $0.bytes==old}) else { throw F65Error.invalid("Backup does not contain the previous block. Nothing was saved.") }
-    if t.kind == .receiver { if try t.read(7,sub:0).first != 1 { throw F65Error.asleep } }
+    if checkAwake && t.kind == .receiver { if try t.read(7,sub:0).first != 1 { throw F65Error.asleep } }
     let changed=new.indices.filter {new[$0] != old[$0]}
     if changed.isEmpty { return old }
     func attempt(_ data:[UInt8], rollback:Bool) -> [UInt8]? {
@@ -59,6 +60,9 @@ public func validateChanges(cmd:UInt8,new:[UInt8],old:[UInt8]) throws {
     for i in new.indices where new[i] != old[i] {
         if cmd==4 {
             if i==10 {guard (1...18).contains(new[i]) else{throw F65Error.invalid("Unsupported saved effect.")};continue}
+            if let field=LightingBlock.sideOffsets.first(where:{$0.value==i})?.key {
+                guard LightingBlock.sideRange(field).contains(Int(new[i])) else{throw F65Error.invalid("Unsupported side light value.")};continue
+            }
             guard (0x3a...0x5d).contains(i) else {throw F65Error.invalid("Undecoded lighting bytes cannot be changed.")}
             if i%2==0 {guard new[i]<=4 else{throw F65Error.invalid("Brightness must be 0–4.")}}
             else {guard new[i]>>4<=4,new[i]&15<=7 else{throw F65Error.invalid("Invalid speed or colour.")}}
