@@ -14,7 +14,11 @@ cp "$BIN_DIR/F65Lighting" "$STAGE/Contents/MacOS/F65Lighting"
 cp Info.plist "$STAGE/Contents/Info.plist"
 printf 'APPL????' > "$STAGE/Contents/PkgInfo"
 if [ -d Resources/keyboard ]; then cp -R Resources/keyboard "$STAGE/Contents/Resources/keyboard"; fi
-codesign -s - --force --deep "$STAGE"
+# Sign with a stable identity so macOS keeps the Input Monitoring permission across rebuilds
+# (ad-hoc signatures change every build). Override with F65_SIGN_ID; falls back to ad-hoc.
+SIGN_ID="${F65_SIGN_ID:-$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/Apple Development|F65 Lighting Dev/ {print $2; exit}')}"
+codesign -s "${SIGN_ID:--}" --force --deep "$STAGE"
+echo "Signed with: ${SIGN_ID:-ad-hoc}"
 codesign --verify --deep --strict "$STAGE"
 rm -rf "$APP"
 mv "$STAGE" "$APP"
