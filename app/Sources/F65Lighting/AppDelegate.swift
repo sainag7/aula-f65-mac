@@ -84,6 +84,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if engine.isMock, ProcessInfo.processInfo.environment["F65_SMOKE"] == "1", let window=mainWindow {
             Task { await SmokeTest.run(model:model,window:window) }
         }
+        if engine.isMock, let folder=ProcessInfo.processInfo.environment["F65_SHOTS"], let window=mainWindow {
+            Task { await Screenshots.run(model:model,window:window,folder:folder) }
+        }
     }
 
     // MARK: Settings

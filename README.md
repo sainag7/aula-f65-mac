@@ -1,10 +1,324 @@
-# f65: AULA F65 control on macOS
+# F65 Lighting for macOS
 
-Reverse-engineered from the official Windows driver (`AULA F65 driver.exe`, Inno Setup →
-MFC app, device class `CDev3632`). Every write first saves a backup to `backups/`.
+A native Mac app for the **AULA F65** keyboard. Change its lighting, paint your own key colours, remap keys and go back to any earlier setup, all without the Windows driver.
+
+![The Looks screen: a 3D preview of the keyboard, the current look, quick-tune sliders and a gallery of looks](docs/images/looks.png)
+
+<sub>All screenshots were taken with the app's built-in mock keyboard, so the toolbar says "Mock keyboard".</sub>
+
+- **Looks:** pick how the keyboard should look from a gallery and click to apply it. Undo with ⌘Z.
+- **Studio:** paint individual keys over a moving background (WASD red over a rainbow, for example).
+- **Keys:** remap any key on the base layer or the Fn layer. Search for what it should send, or press a key to copy it.
+- **History:** a restore point is saved before every change. Go back to any of them with one click.
+- **Fast paths:** a ⌘K command bar ("wasd red", "dim 50"), a menu-bar menu, and a global shortcut that cycles your favourites.
+- **Safe by design:** every save is backup → write → read back and verify → roll back if anything differs. The app never sends firmware, factory-reset, macro or game-mode writes.
+
+Works over the **USB cable** and the **2.4G wireless receiver**. Bluetooth isn't supported.
+
+---
+
+## Contents
+
+- [Install](#install)
+- [First launch](#first-launch)
+- [How it works](#how-it-works)
+- [A tour of the app](#a-tour-of-the-app)
+- [Examples](#examples)
+- [Command bar reference](#command-bar-reference)
+- [Menu bar and shortcuts](#menu-bar-and-shortcuts)
+- [Command-line tools](#command-line-tools)
+- [What isn't confirmed yet](#what-isnt-confirmed-yet)
+- [Troubleshooting](#troubleshooting)
+- [For developers](#for-developers)
+
+---
+
+## Install
+
+There's no download yet, so you build the app from source. It takes about a minute.
+
+**You need**
+- macOS 13 Ventura or later
+- Xcode 15.3 or later (free from the App Store). Open it once after installing so it can finish setting up.
+- An AULA F65, connected with the USB cable or the 2.4G receiver
+
+**Build it**
+
+```bash
+git clone https://github.com/sainag7/aula-f65-mac.git
+```
+
+```bash
+cd aula-f65-mac/app && ./build.sh
+```
+
+```bash
+open "F65 Lighting.app"
+```
+
+`build.sh` compiles a release build and puts `F65 Lighting.app` in the `app` folder. If it finds an Apple Development certificate on your Mac it signs the app with it, so macOS remembers the app's permissions between rebuilds. Otherwise it uses an ad-hoc signature.
+
+**Optional:** copy it to Applications so you can launch it from Spotlight.
+
+```bash
+cp -R "F65 Lighting.app" /Applications/
+```
+
+**Updating:** run `git pull`, then `./build.sh` again. Quit the running app (menu-bar icon → **Quit F65 Lighting**) and reopen it so the new build loads.
+
+## First launch
+
+1. **Allow Input Monitoring.** The keyboard's lighting controls sit on the same USB device as its keys, so macOS asks whether "F65 Lighting" may *receive keystrokes from any application*. The app never reads what you type, but macOS asks this for any app that talks to a keyboard. Click **Open System Settings**, turn on **F65 Lighting** under Privacy & Security → Input Monitoring, then quit and reopen the app.
+2. **Connect the keyboard.** The toolbar shows **Online** and either `Cable 258A:010C` or `2.4G 3554:FA09`. On wireless the keyboard falls asleep when idle. If you see *"Press any key on the F65 to wake it"*, press any key.
+3. **Pick a look.** Click one of the cards on the Looks screen. That's it.
+
+The app lives in the **menu bar** (keyboard icon). The Dock icon only appears while the main window is open. Closing the window keeps the app running in the menu bar.
+
+---
+
+## How it works
+
+### Two kinds of looks
+
+Everything the keyboard can show is a **Look**, and every look carries one of two badges:
+
+| Badge | What it is | Works with the app closed? |
+|---|---|---|
+| 🟩 **On keyboard** | One of the F65's 18 built-in effects (Waterfall, Rainbow wheel, Breathing…) with its own brightness, speed and colour. Saved into the keyboard's memory. | **Yes.** It's stored on the keyboard. |
+| 🟦 **Needs app** | Anything with painted keys or colours the keyboard can't store: a background plus per-key colours. The app draws it and sends a new picture 20 times a second. Nothing is saved on the keyboard. | **No.** About a second after the app stops, the keyboard goes back to its saved effect. |
+
+The F65 can't store per-key colours in its own memory. Painted looks always need the app running.
+
+### Cable vs. wireless (and the "Fixed" popup)
+
+| | USB cable | 2.4G receiver |
+|---|---|---|
+| Saving settings | One report per block. All-or-nothing, fastest. | 10–36 small packets, each acknowledged. Slower. |
+| Needs-app looks | Every key gets its exact colour every frame. | Up to 168 bytes per frame. Painted keys stay exact, and a busy background is simplified to fit. |
+| Catch | none | The keyboard **only shows app-drawn lighting while its saved effect is Fixed.** |
+
+That catch is why you'll see this popup when you apply a Needs-app look over wireless:
+
+> **WASD focus is drawn by this app.** Over 2.4G the F65 only shows app-drawn lighting while its saved effect is Fixed. Set the saved effect to Fixed now?
+
+- **Set to Fixed and apply:** one lighting save (with a restore point first), then your look shows. When you quit the app, the keyboard shows the plain Fixed colour instead of the effect it had before. Applying any On-keyboard look switches that back.
+- **Apply without it:** nothing changes on the keyboard, and the look only appears in the app's preview.
+- **Always set Fixed for app looks:** don't ask again.
+
+Over the cable none of this is needed.
+
+### The 7 keyboard colours
+
+On-keyboard effects can only use the keyboard's **7-colour palette**, which starts as red, green, blue, yellow, magenta, cyan and white. If you pick a colour that isn't one of the 7, the colour chooser shows three options:
+- **replace** the least-used palette colour. It tells you which other saved effects use that colour too.
+- use the **nearest** of the 7.
+- turn it into a **Needs app** look, which can show any colour.
+
+### Every save is protected
+
+Each change to the keyboard follows the same steps:
+
+1. Check that the keyboard is awake and answering.
+2. Save a **restore point**, the keyboard's full settings, to `~/Library/Application Support/F65Lighting/backups/`.
+3. Write the change.
+4. Read it back and compare every changed byte.
+5. If anything differs, retry once, then **roll back** to the restore point and verify the rollback.
+
+The app only ever writes three things: **key layers** (command 01), **lighting** (04) and the **colour palette** (09). Firmware updates, factory reset, macros and game mode are never written.
+
+Lighting changes from the sliders are batched. The app waits 0.4 s after you stop dragging and then saves once. Each lighting save briefly blinks the keyboard's lights; that's the keyboard storing its settings, not an error.
+
+---
+
+## A tour of the app
+
+The window has five sections in the sidebar. The toolbar shows the connection, a refresh button and the ⌘K command bar, and the status line at the bottom shows what was last saved.
+
+### Looks
+
+![Looks screen](docs/images/looks.png)
+
+- **The big preview** shows the current look. Hover any card to preview it there. The preview is drawn by the app, so it's an approximation of the real lighting.
+- **Current look** says what's on the keyboard, whether it's On keyboard or Needs app, and has **Edit in Studio**.
+- **Try on keyboard:** turn it on and hovering a card shows that look on the real keyboard before you commit. This works over the cable, or over 2.4G while the saved effect is Fixed.
+- **Quick-tune bar:** changes apply to whatever is showing.
+  - **Brightness:** the keyboard's 5 steps (off → max) for On-keyboard looks, 0–100 % for Needs-app looks.
+  - **Speed:** 0–4. Whether higher means faster isn't confirmed (see below).
+  - **Colour:** one of the 7 keyboard colours or multicolour, or any colour for Needs-app looks.
+  - **Side lights:** the light strips along the bottom edges. Off, Rainbow flow, Colour cycle, Solid or Breathing, with brightness, speed and colour.
+- **Favourites:** click ☆ on any card. Favourites show in the menu bar, and ⌃⌥⌘L cycles them from anywhere.
+- **All looks:** right-click a card to favourite it, edit a copy in Studio, or delete it.
+- **Onboard effects** at the bottom of the page lists all 18 built-in effects. Click one to switch to it.
+
+The app comes with these starter looks:
+
+| On keyboard | Needs app |
+|---|---|
+| Waterfall, Rainbow wheel, Calm breathing, Desk light, Starfield, Storm, Ripples | WASD focus (red WASD over a rainbow wave), Night coder (amber F/J and arrows on dark), Sunset (orange-to-blue gradient), Synthwave (cyan Space/Enter/Esc over a pink sine wave) |
+
+After any change a toast appears at the bottom with **Undo**. ⌘Z works too.
+
+### Studio
+
+![Studio screen: a flat keyboard painted with a rainbow wave and red WASD keys, tools along the top, layers and side lights on the right](docs/images/studio.png)
+
+Paint keys over a background. Nothing is saved until you click **Save look**.
+
+- **Tools** (left to right): **Brush**, **Fill** (fills keys of the same colour that touch), **Select**, **Eyedropper**, **Gradient** (drag from one key to another), **Eraser**.
+- **Brush tips:** drag across keys to paint them. **Click a painted key again to clear it.** If you start a drag on a key that already has the brush colour, the whole drag clears instead.
+- **Two colour wells.** The ⇆ button swaps them. Quick swatches sit next to them.
+- **Select** buttons pick a whole region: All, Letters, Numbers, Modifiers, Arrows, WASD, Home row, Space bar. A bar then offers **Paint**, **Gradient** (first colour → second, left to right) and **Unpaint**. The Select tool does the same for keys you drag a box around.
+- **Layers** (top wins):
+  - **Paint:** your painted keys. Shows how many are painted and has **Clear**.
+  - **Background:** Dark, Solid, Rainbow wave, or one of 13 keyboard effects the app can draw (Waterfall, Neon, Sine wave…). Flash away, Ripples, Shadow and Reaction react to typing, so the app can't draw them. They're available as On-keyboard looks only.
+- **Side lights:** the same controls as on the Looks screen.
+- **Budget meter:** over 2.4G, a frame fits 168 bytes. Painted keys always stay exact, and the background is simplified when it doesn't fit. Over the cable it says **exact**.
+- **Show on keyboard while editing:** streams your draft to the real keyboard as you paint.
+
+### Keys
+
+![Keys screen: Caps Lock selected, a search field and a list of keys it can send](docs/images/keys.png)
+
+1. Click a key on the keyboard picture, or choose it from **Physical key**.
+2. Pick **Base** or **Fn layer** at the top right.
+3. Type in the search field. It understands everyday words: `mute`, `volume`, `⌘` or `cmd`, `escape`, `F5`, `disable`. Or click **Press a key to copy it** and press the key you want.
+4. Optionally tick ⌃ ⇧ ⌥ ⌘ to send a combination (for example ⌥ + Tab).
+5. Click the result. It saves right away, with a restore point first.
+
+**Changed keys** lists every base-layer key that no longer sends its default, each with a **Reset** button. Keys that control the Fn layer or switch connections are protected: changing them asks you first. The cable is recommended for key changes because the key map is the biggest block (36 packets over wireless).
+
+### History
+
+![History screen: a list of restore points, each with a thumbnail of its lighting and a Go back button](docs/images/history.png)
+
+Every restore point is shown with a thumbnail drawn from the lighting it saved.
+
+- **Go back** writes only the parts that differ from now. If the key layers are different too, it asks first.
+- **Back up now** saves a restore point without changing anything.
+- **Restore point files…** lets you import, reveal in Finder or fully restore a file.
+
+Needs-app looks aren't stored on the keyboard, so they don't appear here. Use Undo for those.
+
+### Settings
+
+![Settings screen: 3D or flat keyboard preview, camera, colourway, start at login](docs/images/settings.png)
+
+- **Display:** 3D model or Flat preview, with camera angle and colourway (Grey White or Black Grey). These only change the picture in the app.
+- **Start at login:** the app starts quietly in the menu bar.
+- **Keyboard:**
+  - **Connection:** Automatic (prefers the cable), USB cable only, or 2.4G receiver only.
+  - **Pause app looks.**
+  - **Speed direction check** (see below).
+  - **Layout file** for the menu bar's Custom layout mode.
+  - **Side lights.**
+  - **Macros:** shown read-only.
+
+### ⌘K command bar
+
+![The command bar with "wasd red" typed and the suggestion "Paint WASD red"](docs/images/command-bar.png)
+
+Press **⌘K** anywhere in the window and type what you want. ↑/↓ choose a suggestion, Return applies it, Esc closes the bar. The full list is in the [reference](#command-bar-reference) below.
+
+---
+
+## Examples
+
+**Red WASD keys over a rainbow (for games)**
+1. ⌘K → type `wasd red` → Return. Or apply the **WASD focus** starter look.
+2. Over wireless, choose **Set to Fixed and apply** in the popup.
+
+**Dim the keyboard at night**
+- ⌘K → `dim 25`, or drag **Brightness** in the quick-tune bar. `off` turns the key lights off. The setting is saved on the keyboard, so it stays dim with the app closed.
+
+**Make your own look**
+1. Studio → choose **Background: Dark**.
+2. Pick amber in the first colour well, click **Home row**, then **Paint**. Switch the brush to white and click F and J.
+3. Click **Save look** and give it a name. It appears in the gallery. Star it to add it to your favourites.
+
+**Switch between favourites without opening the window**
+- Press **⌃⌥⌘L** anywhere, or click the menu-bar icon and pick one under **Favourite looks**.
+
+**Make Caps Lock a Control key**
+- Keys → click Caps Lock → search `left control` → click **Left Control**. To undo it, use **Reset** in *Changed keys*.
+
+**Fn + F as play/pause**
+- Keys → switch to **Fn layer** → click F → search `play` → **Play/Pause**.
+
+**Go back to how it was this morning**
+- History → find the restore point by its time and thumbnail → **Go back**.
+
+**Exact per-key colours from a file**
+- Menu bar → **Mode → Custom layout**, then **Edit Layout…**. The file is `~/Library/Application Support/F65Lighting/layout.json`, and changes are picked up within about 2 seconds:
+
+  ```json
+  {
+    "rest": "#100020",
+    "keys": {
+      "esc": "#00ffff",
+      "w": "#ff0000", "a": "#ff0000", "s": "#ff0000", "d": "#ff0000",
+      "space": "#ffffff"
+    }
+  }
+  ```
+  `rest` colours every key not listed (`"off"` keeps them dark). Colours can be `#rrggbb`, `#rgb` or a name: `red green blue yellow purple magenta cyan white orange pink off`. [app/README.md](app/README.md#custom-layout-file) lists every key name.
+
+---
+
+## Command bar reference
+
+| Type | What happens |
+|---|---|
+| `wasd red`, `arrows cyan`, `home row amber`, `esc enter #ff8800` | Paints those keys over what's showing now (a Needs-app look) |
+| `red`, `#6a00ff` | Changes the colour of the current look |
+| `dim 50`, `brightness 80`, `40%`, `bright` | Sets brightness. On-keyboard looks round to the nearest of the keyboard's 5 steps |
+| `off`, `lights off` | Brightness 0 |
+| `storm`, `waterfall`, `sunset` | Applies a saved look or an onboard effect by name |
+| `undo` | Undoes the last change (same as ⌘Z) |
+
+Regions you can paint: `wasd`, `arrows`, `letters`, `numbers`, `modifiers`, `space`, `home row`, `all`. Keys you can name: `esc`, `enter`, `tab`, `caps`, `backspace`, `delete`, `fn`, `shift`, `ctrl`, `alt`/`option`, single letters and digits. Colour names: `red green blue yellow magenta pink cyan white orange purple amber`, or any `#rrggbb`.
+
+## Menu bar and shortcuts
+
+Click the keyboard icon in the menu bar:
+
+| Item | What it does |
+|---|---|
+| **Open F65…** (⌘O) | Opens the main window |
+| **Command…** (⌘K) | Opens the window with the command bar |
+| **Favourite looks** | Your starred looks with small previews. Click one to apply it |
+| **Next Favourite** (⌃⌥⌘L, works in any app) | Cycles through your favourites |
+| **Live lighting → Mode** | Off, Solid colour, Rainbow wave, Custom layout |
+| **Choose Colour…**, **Brightness** | Colour and brightness of the live lighting |
+| **Pause / Resume** | Stops live lighting without forgetting it |
+| **Edit Layout…**, **Reload Layout** | Opens or re-reads `layout.json` |
+| **Connection** | Automatic (prefer cable) · USB cable only · 2.4G receiver only |
+| **Start at Login** | Starts the app in the menu bar when you log in |
+| **Quit F65 Lighting** | The keyboard returns to its own saved effect after about a second |
+
+| Shortcut | Where | Action |
+|---|---|---|
+| ⌘K | Main window | Command bar |
+| ⌘Z | Main window | Undo the last change |
+| ⌃⌥⌘L | Anywhere | Next favourite look |
+| ⌘O | Menu-bar menu | Open the main window |
+
+---
+
+## Command-line tools
+
+The repo also has two small command-line tools. They're useful for scripting and recovery, and they work without the app. Both make a backup before every write.
 
 ```bash
 swiftc -O -o f65 f65.swift
+```
+
+```bash
+swiftc -O -o wired wired.swift
+```
+
+`f65` works over the 2.4G receiver, or over the cable when that's connected:
+
+```bash
 ./f65 led                          # show current lighting
 ./f65 led effect neon              # fixed breathing rainbow flash-away raindrops rainbow-wheel ripples
                                    # stars shadow snake neon reaction sine-wave scanning windmill
@@ -13,171 +327,94 @@ swiftc -O -o f65 f65.swift
 ./f65 led speed 2                  # 0–4
 ./f65 led color blue               # red green blue yellow magenta cyan white rainbow (or 0–7)
 ./f65 palette                      # show the 7 palette colours
-./f65 palette blue #6a00ff         # redefine palette colour "blue" (any #rrggbb)
+./f65 palette blue #6a00ff         # redefine palette colour "blue"
 ./f65 palette reset                # factory palette
 ./f65 remap capslock lctrl         # base layer
 ./f65 remap f play --fn            # Fn layer: Fn+F = play/pause
 ./f65 remap rcmd none              # disable a key
 ./f65 keys                         # readable key map (base + Fn layer)
 ./f65 restore backups/<file>.txt   # put lighting + both key layers back
-./f65 probe | diff 44 | read 4a    # low-level reading
-```
-Wake the keyboard (press a key) if a command says it's waiting.
-
-## Lighting block (cmd 04/44, 128 bytes) — confirmed by testing
-| Offset | Meaning |
-|---|---|
-| `0x0a` | Current effect (1 = Fixed on, 11 = Neon stream; order = driver's effect list) |
-| `0x12` | **Side lights** effect: 0 Off, 1 Rainbow flow, 2 Colour cycle, 3 Solid, 4 Breathing (Fn + Right Shift steps 1→2→3→4→0) |
-| `0x13` | Side lights palette colour 0–6, 7 = multicolour |
-| `0x14` | Side lights brightness 0–4 |
-| `0x15` | Side lights speed 0–4 |
-
-The side lights can only be changed by saving this block, and the keyboard turns **all** its lights off for a moment
-whenever it stores the block (keys and side strips). They are not part of the live per-key frame: lighting all 58
-slots without a key over 2.4G left the side strips unchanged (tested on the F65).
-| `0x38 + 2·effect` | Brightness 0–4 for that effect |
-| `0x39 + 2·effect` | High nibble: speed 0–4 · low nibble: palette colour 0–6, 7 = multicolour |
-| `0x7e–0x7f` | `5a a5` end marker |
-## Colour palette (cmd 09/49, 490 bytes) — confirmed
-23 groups × 7 colours × (R,G,B) + 7-byte trailer. Factory: red, green, blue, yellow, magenta,
-cyan, white. The side light strip also uses it. It is **not** a per-key colour table: effects 19–21
-are not custom per-key modes (21 = key lights off, status lights only).
-
-## Device
-| Mode | VID:PID |
-|---|---|
-| 2.4G receiver | `3554:FA09` |
-| USB cable | `258A:010C` |
-
-Control interface: vendor usage page `0xFF02`, report ID `0x13`, 20 bytes each way
-(output report sent with SetReport, replies arrive as input reports).
-
-## Packet
-```
-[0] 0x13   [1] cmd   [2] packet count   [3] packet index
-[4] (sub << 4) | data length (≤14)   [5..18] data   [19] sum(bytes 0..18) & 0xFF
-```
-A reply with bit 7 of `cmd` set is a NAK. Multi-packet replies come back as `count` packets.
-Over 2.4G some packets are dropped, so the tool retries and merges packets by index.
-
-## Commands (✅ = confirmed working on your keyboard)
-| Write | Read | What | Size |
-|---|---|---|---|
-| — | `07` ✅ | Is the keyboard connected to the receiver (1 = yes) | 1 |
-| `01` | `41` ✅ | Key matrix; sub 0 = base layer, sub 1 = Fn layer | 504 |
-| `02` | `42` | Game-mode settings | no reply yet |
-| `03` | `43` ✅ | Macro memory (currently empty) | 512 |
-| `04` | `44` ✅ | Lighting settings (ends in `5a a5`) | 128 |
-| `06` | — | Factory reset | — |
-| `09` | `49` ✅ | 7-colour palette (per effect) | 490 |
-| `0A` | `4A` ✅ | Onboard settings (`64 10`: possibly battery 100% + flags) | 2 |
-| `0B` | — | Screen parameters (not used on the F65) | — |
-
-The keyboard also sends unprompted `0A` status reports when it wakes up (e.g. `05 64 10 00`).
-
-## Key matrix format
-4 bytes per slot, column-major, 6 rows per column (21 columns).
-| Type | Meaning | Example |
-|---|---|---|
-| `00 mods 00 usage` | Normal key + modifier bitmask | `00 04 00 2b` = Alt+Tab |
-| `02 00 hi lo` | Media/consumer key | `02 00 00 e2` = Mute |
-| `07 00 00 n` | Lighting function n | Fn+Q etc. |
-| `08 a b c` | Connection/system (BT channel, 2.4G, …) | |
-| `0d 00 00 00` | Fn key itself | |
-
-## What the official driver can change (from its UI)
-- **Lighting**: 20 effects (Fixed, Respire, Rainbow, Flash away, Raindrops, Rainbow wheel,
-  Ripples, Stars, Shadow, Retro snake, Neon stream, Reaction, Sine wave, Scanning, Windmill,
-  Waterfall, Blossoming, Storm, Self-define, Off), brightness 0–4, speed 0–4, direction,
-  colour / random colour, per-key custom colours.
-- **Music mode**: lighting that follows system audio (10 modes, done by the app streaming data).
-- **Key remap**: any key on base and Fn layers → key, combo, media key, mouse button,
-  Windows command, macro, or disabled.
-- **Macros**: recorded key/mouse sequences with delays and loop modes.
-- **Game mode**: Win-key lock and similar.
-- **Sleep timer** (wireless), **debounce**, **battery**, firmware version, factory reset.
-
-## Not done yet
-- Per-key colours can't be **stored** on the F65 (effect 21 only blanks the keys), but they work as
-  **live lighting** over the cable: see "Live per-key lighting" below.
-- Macros, game mode, sleep timer, debounce, factory reset:
-  readable or located, but writes are still blocked in the code.
-- Lighting bytes `0x00–0x37` (probably direction, sleep and global flags) aren't decoded yet.
-- Firmware update: will not be implemented (risk of bricking).
-
-## Wired mode (USB cable, 258A:010C) — `wired.swift`, read-only
-Driver class `CDevG5KB`. 520-byte feature report, ID 6:
-`06 | cmd | sub | 00 | page count | page index | len lo | len hi | ≤512 data bytes`.
-Read = send the header with `cmd | 0x80` (SetReport), then GetReport. Write cmds: 03 key matrix,
-04 LED, 05 macro, 06 game, 0A palette, 0B ?, 11 factory reset.
-Reads return the **same** lighting block, palette and key map as 2.4G, so the cable is just
-another way to reach the same storage. Unknown commands (0B–12) return windows onto other blocks.
-```bash
-swiftc -O -o wired wired.swift
-./wired               # LED, palette, key map
-./wired 04 128 -v     # one block: <cmd> <length> [sub]
-```
-
-## Live per-key lighting (cable only) — confirmed
-Method from [aula-f75-mac-driver](https://github.com/Itzadetunji/aula-f75-mac-driver) (same chip).
-One feature report per frame: `06 08 00 00 01 00 7a 01` + 126 × (R,G,B), slot = column×6 + row
-(same numbering as the key map). Send ~20 frames/s; faster starves key scanning. The keyboard goes
-back to its saved effect about a second after frames stop. Nothing is written to its memory.
-```bash
-./wired live test 15                               # row colours, 15 s
-./wired live all purple                            # until Ctrl-C
-./wired live keys w=red a=red s=red d=red rest=off # until Ctrl-C (add seconds to stop on its own)
-./wired live wave                                  # moving rainbow
-```
-Key names: a–z 0–9 esc tab caps enter space backspace delete arrows pgup pgdn end
-ctrl shift alt cmd rctrl rshift ralt rcmd fn - = [ ] \\ ; ' ` , . /. Colours: names or #rrggbb.
-
-### Over the 2.4G receiver — `f65 live` (only shows while the saved effect is **Fixed**)
-Output reports `13 88 <total> <seq> <0x10+n> <14 data bytes> <checksum>`; data is colour groups
-`R G B count slot…` (colours rounded to 0/85/170/255 so keys share groups; unlisted keys go dark).
-Only slots holding a real key are sent, groups go out in a fixed order (otherwise keys flicker), and
-frames may use up to 12 reports — **7-report frames confirmed working on the F65** (the F75 project caps at 6).
-
-**Saving settings while live lighting runs:** every lighting/palette save makes the keyboard turn all its lights off
-for a moment and then fade its own effect back in, and it ignores live frames until that fade-in ends. The app resends
-the live picture 20×/s for 2 s after every save, so it takes over as soon as the keyboard allows. Setting the saved
-effect's brightness to 0 keeps the fade-in dark: live colours are **not** dimmed by it (tested on the F65), but the keys
-are dark when no app is streaming.
-
-**What makes 2.4G smooth (all tested by eye on the F65):**
-- **Space the reports.** The receiver drops reports sent back to back, so keys stall and then jump. 2 ms
-  between the reports of a frame fixed it. This mattered far more than anything else.
-- Send a frame only when it changes, plus a keep-alive every 0.4 s (the keyboard reverts after ~1 s).
-- Exact colours when they fit; rounding to 0/85/170/255 only for frames that would be too big.
-- Never send the hidden F-key row (row 0).
-- The wave is a smooth flow at 20 fps, each column its own hue: 132 B, 10 reports, ~200 reports/s. It looked
-  better than whole-column steps and than 12 or 16 fps.
-- Tuning: `F65_FPS`, `F65_GAP` (ms), `F65_DUP` (send each new frame N times), `F65_STEPPED=1` with
-  `F65_HUES`/`F65_STEP`; `F65_DEBUG=1` prints frames, bytes, reports and send times per second.
-
-## Mac app — `app/`
-`cd app && swift test && ./build.sh`, then `open "app/F65 Lighting.app"`. A menu-bar app with a main window
-(**Open F65…**, ⌘O) that reads and saves the keyboard's own settings (effect, brightness, speed, colour,
-palette, both key layers, restore points) through the same backup → write → verify → rollback routine as
-`./f65`, and streams live lighting (solid colour, rainbow wave or a per-key `layout.json`). It picks the
-cable or the 2.4G receiver automatically and pauses live frames during every settings read or write.
-`./f65` still refuses to save while the app runs; quit the app to use the CLI. See [app/README.md](app/README.md).
-```bash
-./wired effect fixed                       # (cable) switch the saved effect to Fixed first
-./f65 live test 15
+./f65 live wave                    # live rainbow (2.4G: saved effect must be Fixed)
 ./f65 live keys w=red a=red s=red d=red rest=off
-./f65 live wave
 ```
 
-**Safe saving (`f65`):** every settings change (`led`, `palette`, `remap`, `restore`, `poke`) goes through one
-routine that
-- uses the **USB cable automatically** when the keyboard is in wired mode (one 520-byte report per block, so a
-  save is all-or-nothing); otherwise 2.4G (10–36 acknowledged packets);
-- refuses while the menu-bar app is running (its live frames disturb reads and acknowledgements);
-- checks the keyboard is answering, backs up to `backups/`, saves, then reads back every changed byte;
-- retries once, then **rolls back** to the previous contents (verified) — or tells you the restore command.
-Only changed bytes are compared: some bytes (e.g. lighting offset `0x0e`) change on their own.
-Tested over 2.4G: normal saves, a forced verify failure (`F65_TEST_VERIFY_FAIL=1`) rolling back, and the
-36-packet key map / 35-packet palette. The F75 project reports a brick from radio writes; for one-off big
-changes (remaps, palette) plugging in the cable is still the safest.
+`wired` is for the USB cable. It reads settings and streams live lighting:
+
+```bash
+./wired                            # LED, palette, key map
+./wired effect fixed               # switch the saved effect to Fixed
+./wired live wave                  # moving rainbow
+./wired live keys w=red a=red s=red d=red rest=off
+```
+
+`f65` refuses to save while the app is running, because the app's live frames would disturb its reads. Quit the app first. If the keyboard says it's waiting, press a key to wake it.
+
+The packet formats, memory layout and everything learned while reverse-engineering the keyboard are in **[docs/PROTOCOL.md](docs/PROTOCOL.md)**.
+
+---
+
+## What isn't confirmed yet
+
+The app labels these in its UI instead of guessing:
+
+- **Speed direction.** It isn't known whether speed 4 is fastest or slowest on every effect. Settings → **Speed direction → Check…** shows speed 1 and speed 3 on your keyboard, asks which looked faster, remembers your answer and puts your own speed back.
+- **Battery.** The keyboard reports a number that looks like a battery percentage. It's shown as "Battery ~N % · unconfirmed".
+- **Effect previews.** On-keyboard effects are run by the keyboard's firmware. The app's previews are close drawings of them, not copies.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| **Offline / "Press any key on the F65 to wake it"** | On wireless the keyboard sleeps when idle. Press any key. Looks you choose meanwhile apply as soon as it answers. |
+| **"Needs Input Monitoring permission"** | System Settings → Privacy & Security → Input Monitoring → turn on F65 Lighting, then quit and reopen the app. After a rebuild with an ad-hoc signature, remove the old entry with − and add the new app with +. |
+| **A Needs-app look doesn't show on the keyboard (wireless)** | The keyboard's saved effect must be Fixed. Apply the look again and choose **Set to Fixed and apply**, or use the cable. |
+| **The lights blink off for a moment when I save** | Normal. The keyboard does this whenever it stores lighting. |
+| **`./f65` says the app is running** | Quit the app from the menu bar first. |
+| **A save failed** | The app has already rolled back to the restore point it made. The status line says so, and **Restore backup** appears if anything needs your attention. Plugging in the cable makes big saves (key maps, palette) the most reliable. |
+| **Something else** | Run the app from Terminal with logging: `F65_DEBUG=1 "app/F65 Lighting.app/Contents/MacOS/F65Lighting"` |
+
+Your data lives in `~/Library/Application Support/F65Lighting/`:
+
+| File | What's in it |
+|---|---|
+| `looks.json` | Your saved looks |
+| `layout.json` | The custom layout file |
+| `keymap.hex` | Cached copy of your key map |
+| `backups/` | Restore points |
+
+---
+
+## For developers
+
+```bash
+cd app && swift test               # unit tests: packets, retries, rollback, blocks, looks, commands
+```
+
+```bash
+F65_MOCK=1 "app/F65 Lighting.app/Contents/MacOS/F65Lighting"               # every screen, no keyboard needed
+```
+
+```bash
+F65_MOCK=1 F65_SMOKE=1 "app/F65 Lighting.app/Contents/MacOS/F65Lighting"   # scripted check, quits when done
+```
+
+```bash
+F65_MOCK=1 F65_SHOTS="$PWD/docs/images" "app/F65 Lighting.app/Contents/MacOS/F65Lighting"   # retake these screenshots
+```
+
+`F65_MOCK=1` runs against an in-memory keyboard and never opens a USB device. The code layout, internals and connection details are in [app/README.md](app/README.md). Design mockups are in [`mockups/`](mockups/).
+
+| Folder / file | What it is |
+|---|---|
+| `app/` | The Mac app (Swift package: `F65Kit` library + `F65Lighting` app) |
+| `f65.swift`, `wired.swift` | Command-line tools (2.4G and cable) |
+| `docs/PROTOCOL.md` | Reverse-engineered protocol notes |
+| `mockups/` | Interactive design mockups (HTML) |
+
+Bundle id `local.f65.lighting`, executable `F65Lighting`.
+
+## Credits and license
+
+The live per-key lighting method came from [aula-f75-mac-driver](https://github.com/Itzadetunji/aula-f75-mac-driver), which drives a keyboard with the same chip. Everything else was worked out from the official Windows driver and tested on an F65. Not affiliated with AULA.
+
+MIT license. See [LICENSE](LICENSE). Changing keyboard settings is at your own risk, though every write is backed up and verified.
