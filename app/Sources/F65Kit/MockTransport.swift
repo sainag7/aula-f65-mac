@@ -7,6 +7,9 @@ public final class MockTransport: Transport {
     public var writes=0
     public var liveFrames=0
     public var readLog:[UInt8]=[]
+    /// Recent operations in order ("read 44", "write 4", "live"), for ordering checks in tests.
+    public private(set) var events:[String]=[]
+    func note(_ e:String) {events.append(e);if events.count>400 {events.removeFirst(events.count-400)}}
     public var storage: [String:[UInt8]]
     public init(kind: LinkKind = .cable, records: [BackupRecord]? = nil) {
         self.kind=kind
@@ -17,18 +20,25 @@ public final class MockTransport: Transport {
         for r in records ?? [] {storage["\(r.cmd):\(r.sub)"]=r.bytes}
     }
     public func read(_ cmd: UInt8, sub: UInt8 = 0) throws -> [UInt8] {
-        readLog.append(cmd);if cmd==7 {return [asleep ? 0 : 1]};if asleep {throw F65Error.asleep}
+        readLog.append(cmd);note(String(format:"read %02x",cmd));if cmd==7 {return [asleep ? 0 : 1]};if asleep {throw F65Error.asleep}
         guard let b=storage["\(cmd):\(sub)"] else {throw F65Error.timeout(cmd)};return b
     }
     public func write(_ cmd: UInt8, sub: UInt8 = 0, data: [UInt8], progress: WriteProgress) throws {
-        try Blocks.validate(cmd,sub:sub,data);if asleep {throw F65Error.asleep};writes+=1
+        try Blocks.validate(cmd,sub:sub,data);if asleep {throw F65Error.asleep};writes+=1;note("write \(cmd)")
         if failWrites.contains(writes) {throw F65Error.nak(cmd)}
         var b=data;if corruptWrites.contains(writes) { b=b.map {$0 ^ 1} }
         storage["\(cmd|0x40):\(sub)"]=b
         let n=kind == .cable ? 1 : (data.count+13)/14
         for i in 1...n {progress(i,n,false)}
     }
-    public func sendLive(_ colors: [RGB], slots: [Int]) -> Bool { liveFrames+=1; return !asleep }
+    /// Time one live frame takes to send (a real 2.4G frame takes ~20–30 ms).
+    public var sendDelay: TimeInterval = 0
+    public func sendLive(_ colors: [RGB], slots: [Int], pinned: Set<Int>) -> Bool { if sendDelay>0 {Thread.sleep(forTimeInterval:sendDelay)}; liveFrames+=1; lastLive=colors; note("live"); return !asleep }
+    public var lastLive:[RGB]?
+    public var statusRequests=0
+    private var statusAsked=false
+    public func requestStatus() throws { statusRequests+=1; statusAsked=true }
+    public func takeStatusReply() -> Bool? { guard statusAsked else {return nil}; statusAsked=false; return !asleep }
 }
 // Packet-level mock: exercises the production receiver algorithm, including losses and retries.
 public final class MockPacketChannel: PacketChannel {

@@ -8,10 +8,18 @@ public protocol Transport: AnyObject {
     var kind: LinkKind { get }
     func read(_ cmd: UInt8, sub: UInt8) throws -> [UInt8]
     func write(_ cmd: UInt8, sub: UInt8, data: [UInt8], progress: WriteProgress) throws
-    func sendLive(_ colors: [RGB], slots: [Int]) -> Bool
+    func sendLive(_ colors: [RGB], slots: [Int], pinned: Set<Int>) -> Bool
     func drain()
+    /// Non-blocking connection check, so the live stream never stops for it: send the request, then poll
+    /// `takeStatusReply()` on later ticks (true/false once answered, nil while waiting).
+    func requestStatus() throws
+    func takeStatusReply() -> Bool?
 }
-public extension Transport { func drain() {} }
+public extension Transport {
+    func drain() {}
+    func requestStatus() throws {}
+    func takeStatusReply() -> Bool? { true }
+}
 public protocol PacketChannel: AnyObject {
     func send(_ packet: [UInt8]) throws
     func receive(timeout: TimeInterval) -> [UInt8]?
@@ -78,8 +86,17 @@ public final class ReceiverTransport: Transport {
         }
     }
     func valid(_ p: [UInt8]) -> Bool { p.count == 20 && p[0]==0x13 && ReceiverProtocol.checksum(p)==p[19] }
-    public func sendLive(_ colors: [RGB], slots: [Int]) -> Bool {
-        do { for (i,p) in ReceiverProtocol.reports(colors,slots:slots).enumerated() { if i>0 { Thread.sleep(forTimeInterval:0.002) }; try channel.send(p) }; return true } catch { return false }
+    public func requestStatus() throws { channel.drain(); try channel.send(SettingsPacket.receiver(7, sub: 0)) }
+    public func takeStatusReply() -> Bool? {
+        var answer: Bool?
+        while let p = channel.receive(timeout: 0) {
+            guard valid(p), p[1] == 7, p[4] & 15 == 1 else { continue }
+            answer = p[5] == 1
+        }
+        return answer
+    }
+    public func sendLive(_ colors: [RGB], slots: [Int], pinned: Set<Int>) -> Bool {
+        do { for (i,p) in ReceiverProtocol.reports(colors,slots:slots,pinned:pinned).enumerated() { if i>0 { Thread.sleep(forTimeInterval:0.002) }; try channel.send(p) }; return true } catch { return false }
     }
 }
 public final class CableTransport: Transport {
@@ -106,5 +123,5 @@ public final class CableTransport: Transport {
         var p=SettingsPacket.cable(m.cmd,sub:sub,length:m.len);p.replaceSubrange(8..<8+data.count,with:data)
         try send(p);Thread.sleep(forTimeInterval:0.1);progress(1,1,false)
     }
-    public func sendLive(_ colors: [RGB], slots: [Int]) -> Bool { do { try send(CableProtocol.frame(colors));return true } catch { return false } }
+    public func sendLive(_ colors: [RGB], slots: [Int], pinned: Set<Int>) -> Bool { do { try send(CableProtocol.frame(colors));return true } catch { return false } }
 }
