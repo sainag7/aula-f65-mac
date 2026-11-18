@@ -15,7 +15,7 @@ struct LightingView:View {
             Text("Onboard lighting").font(.headline)
             Text("Saved on the keyboard. Works with the app closed.").foregroundStyle(.secondary)
             HStack(alignment:.top,spacing:20) {
-                VStack(alignment:.leading,spacing:8){KeyboardView(model:model).frame(height:340);Text(model.frame==nil ? "Preview is approximate · hover previews without saving":"Showing live lighting streamed by the app").font(.caption).foregroundStyle(.secondary)}
+                VStack(alignment:.leading,spacing:8){KeyboardView(model:model).frame(height:340);Text(!model.showingLiveFrame ? "Preview is approximate · hover previews without saving":"Showing live lighting streamed by the app").font(.caption).foregroundStyle(.secondary)}
                 inspector.frame(width:215)
             }
             if model.live.mode != .off && !model.live.paused {
@@ -33,7 +33,42 @@ struct LightingView:View {
                     .help("Preview \(LightingBlock.names[e-1]); click to save to keyboard")
                 }
             }
+            sideLights
         }.sheet(isPresented:$editingPalette){paletteSheet}
+    }
+    /// The side light strips (the glow on the desk at the bottom-left and bottom-right). Saved on the keyboard and
+    /// independent of the key lighting, so they keep running under live lighting too.
+    @ViewBuilder var sideLights:some View {
+        if let led=model.lighting {
+            let effect=led.side("sideEffect")
+            VStack(alignment:.leading,spacing:14) {
+                Text("Side lights").font(.headline)
+                Text("The glow along the bottom-left and bottom-right edges. Saved on the keyboard, separate from the key lighting. Fn + Right Shift also steps through these effects. The keyboard blinks its lights off for a moment each time it stores a change; quick clicks are saved together.").foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                Picker("Side light effect",selection:Binding(get:{effect},set:{model.edit(.lighting("sideEffect",$0))})) {
+                    ForEach(LightingBlock.sideEffectRange,id:\.self){Text(LightingBlock.sideEffectName($0)).tag($0)}
+                }.pickerStyle(.segmented).labelsHidden().frame(maxWidth:560)
+                if effect != 0 {
+                    HStack(alignment:.top,spacing:28) {
+                        sideLevel("Brightness",field:"sideBrightness",value:led.side("sideBrightness"))
+                        if LightingBlock.sideUsesSpeed(effect) {sideLevel("Speed",field:"sideSpeed",value:led.side("sideSpeed"))}
+                        if LightingBlock.sideUsesColour(effect) {
+                            VStack(alignment:.leading){Text("Colour").font(.subheadline)
+                                HStack(spacing:8){ForEach(0..<8,id:\.self){i in
+                                    Button {model.edit(.lighting("sideColour",i))} label:{ZStack{Circle().fill(i<7 ? (model.device.snapshot?.palette.colours[i].color ?? .gray):Color.gray);Circle().strokeBorder(Color.primary.opacity(0.25),lineWidth:1);if i==7{Image(systemName:"rainbow").font(.caption).foregroundStyle(.white)};if led.side("sideColour")==i{Image(systemName:"checkmark.circle.fill").foregroundStyle(.white,.black)}}.frame(width:26,height:26)}
+                                        .buttonStyle(.plain).accessibilityLabel(i==7 ? "Side lights multicolour":"Side lights palette colour \(i+1)")
+                                        .help(i==7 ? "Multicolour":"Palette colour \(i+1)")
+                                }}
+                            }
+                        }
+                    }
+                }
+            }.padding(16).frame(maxWidth:.infinity,alignment:.leading)
+            .background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:10))
+            .disabled(!model.canWrite)
+        }
+    }
+    func sideLevel(_ label:String,field:String,value:Int)->some View {
+        VStack(alignment:.leading){Text(label).font(.subheadline);Picker(label,selection:Binding(get:{value},set:{model.edit(.lighting(field,$0))})){ForEach(0...4,id:\.self){Text("\($0)").tag($0)}}.pickerStyle(.segmented).labelsHidden().frame(width:200)}.accessibilityLabel("Side lights \(label.lowercased())")
     }
     @ViewBuilder var inspector:some View {
         if let led=model.lighting {
