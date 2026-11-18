@@ -36,6 +36,10 @@ public struct LightingBlock: Equatable {
     public func colour(_ e: Int) -> Int { (1...18).contains(e) ? Int(bytes[0x39+2*e] & 15) : 7 }
     public mutating func setEffect(_ e: Int) throws { guard (1...18).contains(e) else { throw F65Error.invalid("Effect must be 1–18.") }; bytes[10] = UInt8(e) }
     public mutating func set(_ field: String, value: Int) throws {
+        if let off = Self.sideOffsets[field] {
+            guard Self.sideRange(field).contains(value) else { throw F65Error.invalid("Unsupported side light value.") }
+            bytes[off] = UInt8(value); return
+        }
         guard (1...18).contains(effect), (0...(field == "colour" ? 7 : 4)).contains(value) else { throw F65Error.invalid("Unsupported effect or value.") }
         let s = 0x38 + 2*effect
         switch field {
@@ -49,6 +53,26 @@ public struct LightingBlock: Equatable {
         guard (1...18).contains(e), (0...4).contains(brightness), (0...4).contains(speed), (0...7).contains(colour) else { throw F65Error.invalid("Unsupported effect or value.") }
         bytes[0x38+2*e] = UInt8(brightness); bytes[0x39+2*e] = UInt8(speed << 4 | colour)
     }
+    // Side light strips (the glow at the bottom-left and bottom-right edges). The official driver hides these for
+    // the F65 (its config has no ShowSideLED), but the firmware keeps them here and the Fn shortcuts change them:
+    // 0x12 effect (Fn + Right Shift steps it), 0x13 palette colour 0–6 or 7 = multicolour, 0x14 brightness 0–4,
+    // 0x15 speed 0–4. Byte order matches the driver's CDevG5KB::ApplySetting ("SideLED: mode, nLight, nSpeed, nColor").
+    public static let sideOffsets: [String: Int] = ["sideEffect": 0x12, "sideColour": 0x13, "sideBrightness": 0x14, "sideSpeed": 0x15]
+    public static let sideEffectMax = 4
+    public static let sideEffectRange = 0...sideEffectMax
+    public static func sideRange(_ field: String) -> ClosedRange<Int> {
+        switch field { case "sideEffect": return sideEffectRange; case "sideColour": return 0...7; default: return 0...4 }
+    }
+    public func side(_ field: String) -> Int { Self.sideOffsets[field].map { Int(bytes[$0]) } ?? 0 }
+    /// Copies the four side light bytes from another block (queued saves, restores).
+    public mutating func copySide(from other: LightingBlock) { for off in Self.sideOffsets.values { bytes[off] = other.bytes[off] } }
+    /// Confirmed by eye on the F65 (Fn + Right Shift steps 1 → 2 → 3 → 4 → 0 → 1).
+    public static let sideEffectNames = ["Off", "Rainbow flow", "Colour cycle", "Solid", "Breathing"]
+    public static func sideEffectName(_ n: Int) -> String { sideEffectNames.indices.contains(n) ? sideEffectNames[n] : "Effect \(n)" }
+    /// Which controls each side effect uses: a chosen colour (Solid, Breathing) and speed (the moving ones).
+    public static func sideUsesColour(_ n: Int) -> Bool { n == 3 || n == 4 }
+    public static func sideUsesSpeed(_ n: Int) -> Bool { n == 1 || n == 2 || n == 4 }
+
     public static let names = ["Fixed", "Breathing", "Rainbow", "Flash away", "Raindrops", "Rainbow wheel", "Ripples", "Stars", "Shadow", "Snake", "Neon", "Reaction", "Sine wave", "Scanning", "Windmill", "Waterfall", "Blossom", "Storm"]
     public var name: String { (1...18).contains(effect) ? Self.names[effect-1] : "Unsupported effect \(effect)" }
 }
