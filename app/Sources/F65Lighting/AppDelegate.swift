@@ -92,6 +92,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settings.paused = defaults.bool(forKey: "paused")
         if let p = defaults.string(forKey: "connection").flatMap(ConnectionPref.init(rawValue:)) { settings.pref = p }
         settings.layout = LayoutSpec.load()
+        if defaults.object(forKey: "effect") != nil {
+            let e = defaults.integer(forKey: "effect")
+            if Backgrounds.available.contains(e) { settings.effect = e }
+        }
+        if defaults.object(forKey: "effectSpeed") != nil { settings.effectSpeed = min(4, max(0, defaults.integer(forKey: "effectSpeed"))) }
+        if defaults.object(forKey: "effectMulticolour") != nil { settings.effectMulticolour = defaults.bool(forKey: "effectMulticolour") }
+        settings.keyColors = Self.decodeKeyColors(defaults.string(forKey: "keyColors"))
+    }
+
+    /// Per-key colours are stored as JSON: {"w": "#ff0000", …}. Unknown keys and bad colours are dropped.
+    static func encodeKeyColors(_ colors: [String: RGB]) -> String {
+        let obj = colors.mapValues { $0.hex }
+        guard let data = try? JSONSerialization.data(withJSONObject: obj, options: [.sortedKeys]) else { return "{}" }
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    static func decodeKeyColors(_ s: String?) -> [String: RGB] {
+        guard let data = s?.data(using: .utf8), let obj = try? JSONSerialization.jsonObject(with: data) as? [String: String] else { return [:] }
+        var out: [String: RGB] = [:]
+        for (id, hex) in obj where PhysicalKey.slots[id] != nil { if let c = RGB(string: hex) { out[id] = c } }
+        return out
     }
 
     private func apply() {
@@ -100,6 +121,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defaults.set(settings.brightness, forKey: "brightness")
         defaults.set(settings.paused, forKey: "paused")
         defaults.set(settings.pref.rawValue, forKey: "connection")
+        defaults.set(settings.effect, forKey: "effect")
+        defaults.set(settings.effectSpeed, forKey: "effectSpeed")
+        defaults.set(settings.effectMulticolour, forKey: "effectMulticolour")
+        defaults.set(Self.encodeKeyColors(settings.keyColors), forKey: "keyColors")
         model.live = settings
         engine.update(settings)
         refreshMenu()
@@ -198,9 +223,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refreshMenu() {
         guard statusItem != nil else { return }
         for (m, it) in modeItems { it.state = m == settings.mode ? .on : .off }
+        modeItems[.effect]?.title = "Effect: \(Backgrounds.name(settings.effect))"
         for (p, it) in prefItems { it.state = p == settings.pref ? .on : .off }
         for (v, it) in brightnessItems { it.state = abs(v - settings.brightness) < 0.01 ? .on : .off }
-        modeMenuItem.title = "Mode: \(settings.mode.title)"
+        let modeTitle = settings.mode == .effect ? Backgrounds.name(settings.effect) : settings.mode.title
+        modeMenuItem.title = "Mode: \(modeTitle)" + (settings.keyColors.isEmpty ? "" : " + \(settings.keyColors.count) key colour\(settings.keyColors.count == 1 ? "" : "s")")
         pauseItem.title = settings.paused ? "Resume" : "Pause"
         pauseItem.isEnabled = settings.mode != .off
 
