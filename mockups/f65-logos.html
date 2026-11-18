@@ -1,0 +1,272 @@
+<title>F65 Lighting Logos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a recommended pick up top, then a 3-column board of six directions, then the icons in a real Dock and menu bar. */
+:root{
+  --bg:#0B0C0E; --panel:#131519; --raised:#1A1C21; --line:rgba(255,255,255,.08);
+  --fg:#ECE8E1; --muted:#9A968E; --accent:#E9B65A; --accent-ink:#1A1408;
+  --dock-a:#1d2027; --dock-b:#2a2f39; --bar:#1E2026; --bar-fg:#F2F2F2;
+  --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --body:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#F2F0EB; --panel:#FFFFFF; --raised:#F7F5F1; --line:rgba(20,18,14,.10);
+  --fg:#17181B; --muted:#5F5B54; --accent:#9C6A14; --accent-ink:#FFF8EA;
+  --dock-a:#c9ccd4; --dock-b:#e4e6ea; --bar:#ECECEE; --bar-fg:#1B1B1D; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#F2F0EB; --panel:#FFFFFF; --raised:#F7F5F1; --line:rgba(20,18,14,.10);
+  --fg:#17181B; --muted:#5F5B54; --accent:#9C6A14; --accent-ink:#FFF8EA;
+  --dock-a:#c9ccd4; --dock-b:#e4e6ea; --bar:#ECECEE; --bar-fg:#1B1B1D; color-scheme:light}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.wrap{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(30px,4.2vw,46px);line-height:1.05;font-weight:700}
+h2{font-size:22px;font-weight:600}
+h3{font-size:17px;font-weight:600}
+p{margin:0;max-width:65ch}
+.muted{color:var(--muted)}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+header{display:flex;flex-direction:column;gap:14px}
+/* Featured pick */
+.feature{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:40px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:32px}
+.feature .big{width:100%;max-width:340px;aspect-ratio:1}
+.feature .txt{display:flex;flex-direction:column;gap:14px;min-width:0}
+.pill{align-self:flex-start;font:600 12px/1 var(--body);background:var(--accent);color:var(--accent-ink);padding:6px 10px;border-radius:999px}
+ul.why{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.sizes{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-top:6px}
+.sizes figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.sizes figcaption{font:400 11px/1 var(--mono);color:var(--muted)}
+/* Board */
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card .head{display:flex;align-items:baseline;gap:10px}
+.letter{font:600 13px/1 var(--mono);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:4px 6px}
+.card .icon{width:100%;max-width:220px;aspect-ratio:1;align-self:center}
+.card .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+.small{display:flex;align-items:flex-end;gap:12px}
+.glyphs{display:flex;align-items:center;gap:10px;background:var(--bar);color:var(--bar-fg);border-radius:8px;padding:6px 10px}
+.glyphs .lbl{font:400 11px/1 var(--mono);opacity:.6}
+/* Context */
+.context{display:flex;flex-direction:column;gap:18px}
+.dock-scene{border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+.wall{padding:48px 20px 18px;display:flex;justify-content:center}
+.wall.dark{background:radial-gradient(120% 140% at 30% 0%,#3a2a4a 0%,#14151c 55%,#0b0c10 100%)}
+.wall.light{background:radial-gradient(120% 140% at 70% 0%,#ffe2b8 0%,#c6d3ea 55%,#9fb0cf 100%)}
+.dock{display:flex;gap:10px;padding:10px 12px;border-radius:22px;backdrop-filter:blur(10px);flex-wrap:wrap;justify-content:center}
+.wall.dark .dock{background:rgba(40,42,50,.55);border:1px solid rgba(255,255,255,.12)}
+.wall.light .dock{background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7)}
+.dock .slot{display:flex;flex-direction:column;align-items:center;gap:4px}
+.dock .slot span{font:500 10px/1 var(--mono)}
+.wall.dark .dock .slot span{color:#ddd}
+.wall.light .dock .slot span{color:#222}
+.dock svg{width:64px;height:64px;display:block}
+.menubars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.mbar{border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.mbar .strip{display:flex;justify-content:flex-end;align-items:center;gap:16px;padding:6px 14px;font:500 13px/1 var(--body)}
+.mbar.dark .strip{background:#1f2026;color:#f2f2f2}
+.mbar.light .strip{background:#ececee;color:#1b1b1d}
+.mbar .strip .g{display:flex;gap:14px;align-items:center}
+.mbar .strip .g svg{width:18px;height:18px}
+.mbar .cap{padding:8px 14px;font:400 12px/1.4 var(--body);color:var(--muted);background:var(--panel)}
+.note{background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+code{font:400 13px var(--mono)}
+@media (max-width:900px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){
+  .feature{grid-template-columns:1fr;padding:22px;gap:22px}.feature .big{max-width:240px;justify-self:center}
+  .board{grid-template-columns:1fr}.menubars{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){.card .icon{transition:transform .25s ease}.card:hover .icon{transform:translateY(-3px)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">F65 Lighting · app icon</span>
+    <h1>Six logo directions for the app</h1>
+    <p class="muted">Each one is drawn on the macOS icon grid (an 824-point rounded square on a 1024 canvas) in the app's own graphite and amber. Every direction comes with a one-colour menu-bar glyph, since the app spends most of its life up there. Pick one by its letter and I'll turn it into the real app icon.</p>
+  </header>
+
+  <section class="feature" aria-labelledby="pick">
+    <div class="big" data-icon="E"></div>
+    <div class="txt">
+      <span class="pill">Recommended · E</span>
+      <h2 id="pick">Key F</h2>
+      <p>An F spelled out in lit keycaps, the way you'd paint it in Studio. It says "keyboard", "lighting" and "F65" in one shape.</p>
+      <ul class="why muted">
+        <li>Still reads as an F at 16 pixels, where finer details turn to mush.</li>
+        <li>Amber on graphite matches the window's accent, so the icon and the app feel like one product.</li>
+        <li>The menu-bar glyph is the same 3 × 5 grid, so the two are clearly related.</li>
+      </ul>
+      <div class="sizes" aria-label="Key F at Finder sizes">
+        <figure><div data-icon="E" style="width:128px;height:128px"></div><figcaption>128</figcaption></figure>
+        <figure><div data-icon="E" style="width:64px;height:64px"></div><figcaption>64</figcaption></figure>
+        <figure><div data-icon="E" style="width:32px;height:32px"></div><figcaption>32</figcaption></figure>
+        <figure><div data-icon="E" style="width:16px;height:16px"></div><figcaption>16</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="all" style="display:flex;flex-direction:column;gap:18px">
+    <h2 id="all">All six</h2>
+    <div class="board" id="board"></div>
+  </section>
+
+  <section class="context" aria-labelledby="ctx">
+    <h2 id="ctx">In the Dock and the menu bar</h2>
+    <div class="dock-scene"><div class="wall dark"><div class="dock" id="dock-dark"></div></div></div>
+    <div class="dock-scene"><div class="wall light"><div class="dock" id="dock-light"></div></div></div>
+    <div class="menubars">
+      <div class="mbar dark"><div class="strip"><span class="g" id="bar-dark"></span><span>Wed 18 Nov 16:20</span></div><div class="cap">Dark menu bar, glyphs A to F</div></div>
+      <div class="mbar light"><div class="strip"><span class="g" id="bar-light"></span><span>Wed 18 Nov 16:20</span></div><div class="cap">Light menu bar, glyphs A to F</div></div>
+    </div>
+    <div class="note">
+      <h3>What happens after you pick</h3>
+      <p class="muted">I'll export the chosen icon as <code>AppIcon.icns</code> (16 to 1024 points, @1x and @2x), add it to the bundle in <code>build.sh</code> and <code>Info.plist</code>, and replace the menu-bar keyboard symbol with the matching template glyph. The glyph turns grey when nothing is streaming, just like the current icon.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+let uid=0;
+const AMBER="#E9B65A";
+// Shared macOS-style base: graphite rounded square with a soft top highlight.
+function base(id,inner,defs=""){
+  return `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true" style="width:100%;height:100%;display:block">
+  <defs>
+    <linearGradient id="bg${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22252B"/><stop offset="1" stop-color="#08090B"/></linearGradient>
+    <linearGradient id="hl${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <filter id="sh${id}" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".45"/></filter>
+    <filter id="blur${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="34"/></filter>
+    <filter id="soft${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    ${defs}
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg${id})" filter="url(#sh${id})"/>
+  <rect x="101" y="101" width="822" height="822" rx="185" fill="none" stroke="url(#hl${id})" stroke-width="3"/>
+  ${inner}
+</svg>`;
+}
+
+// A · Backlit: one keycap with amber light spilling out from under it.
+function A(id){
+  const defs=`<linearGradient id="cap${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34373E"/><stop offset="1" stop-color="#17191D"/></linearGradient>
+  <linearGradient id="dish${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C1E23"/><stop offset="1" stop-color="#2B2E34"/></linearGradient>`;
+  const inner=`<rect x="262" y="300" width="500" height="470" rx="110" fill="${AMBER}" opacity=".85" filter="url(#blur${id})"/>
+  <rect x="252" y="254" width="520" height="520" rx="104" fill="url(#cap${id})"/>
+  <rect x="304" y="282" width="416" height="404" rx="76" fill="url(#dish${id})"/>
+  <g fill="${AMBER}"><rect x="430" y="366" width="50" height="236" rx="10"/><rect x="430" y="366" width="170" height="50" rx="10"/><rect x="430" y="460" width="132" height="46" rx="10"/></g>
+  <g fill="${AMBER}" filter="url(#soft${id})" opacity=".7"><rect x="430" y="366" width="50" height="236"/><rect x="430" y="366" width="170" height="50"/><rect x="430" y="460" width="132" height="46"/></g>`;
+  return base(id,inner,defs);
+}
+
+// B · Wave: a 65% layout with a colour wave rolling across it.
+const ROWS=[[1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],[1.5,1,1,1,1,1,1,1,1,1,1,1,1,1.5,1],[1.75,1,1,1,1,1,1,1,1,1,1,1,2.25,1],[2.25,1,1,1,1,1,1,1,1,1,1,1.75,1,1],[1.25,1.25,1.25,6.25,1,1,1,1,1,1]];
+function waveColour(t){const h=(40-t*230+360)%360;return `hsl(${h} 92% ${62-t*6}%)`;}
+function B(id){
+  const u=44,k=38,x0=160,y0=392;let keys="",glow="";
+  ROWS.forEach((row,r)=>{let x=0;row.forEach(w=>{const kx=x0+x*u,ky=y0+r*u,kw=w*u-(u-k);const t=Math.min(1,Math.max(0,(x+w/2)/16*0.85+r*0.05));
+    const c=waveColour(t);keys+=`<rect x="${kx}" y="${ky}" width="${kw}" height="${k}" rx="8" fill="${c}"/>`;glow+=`<rect x="${kx}" y="${ky}" width="${kw}" height="${k}" fill="${c}"/>`;x+=w;});});
+  const inner=`<rect x="140" y="372" width="744" height="260" rx="40" fill="#0E1013" stroke="#ffffff" stroke-opacity=".06" stroke-width="3"/>
+  <g filter="url(#blur${id})" opacity=".75">${glow}</g><g>${keys}</g>`;
+  return base(id,inner);
+}
+
+// C · Profile: the F65 from the side, its light strip glowing on the desk.
+function C(id){
+  const defs=`<linearGradient id="strip${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${AMBER}"/><stop offset=".45" stop-color="#FF5C7A"/><stop offset=".75" stop-color="#B45CFF"/><stop offset="1" stop-color="#3FD6FF"/></linearGradient>
+  <linearGradient id="body${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A3D45"/><stop offset="1" stop-color="#1B1D22"/></linearGradient>
+  <linearGradient id="desk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  let caps="";for(let i=0;i<9;i++){const x=214+i*70,yb=540-i*7.2;caps+=`<rect x="${x}" y="${yb-58}" width="56" height="58" rx="12" fill="#2C2F36" stroke="#ffffff" stroke-opacity=".07" stroke-width="2"/>`;}
+  const inner=`<rect x="190" y="640" width="644" height="40" rx="20" fill="url(#strip${id})" filter="url(#blur${id})"/>
+  <path d="M178 548 L846 486 Q862 485 862 500 L862 612 Q862 628 846 628 L178 628 Q162 628 162 612 L162 564 Q162 549 178 548 Z" fill="url(#body${id})"/>
+  ${caps}
+  <rect x="176" y="612" width="672" height="16" rx="8" fill="url(#strip${id})"/>
+  <rect x="200" y="660" width="624" height="120" fill="url(#desk${id})" opacity=".35"/>`;
+  return base(id,inner,defs);
+}
+
+// D · Seven: one keycap ringed by the keyboard's seven palette colours.
+function D(id){
+  const pal=["#FF4545","#41E06E","#4F7BFF","#FFD93D","#FF45D2","#3FE6FF","#F4F2EE"];let dots="",g="";
+  pal.forEach((c,i)=>{const a=-Math.PI/2+i*2*Math.PI/7,x=512+282*Math.cos(a),y=512+282*Math.sin(a);dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="40" fill="${c}"/>`;g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="40" fill="${c}"/>`;});
+  const defs=`<linearGradient id="cap${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34373E"/><stop offset="1" stop-color="#17191D"/></linearGradient>`;
+  const inner=`<g filter="url(#soft${id})" opacity=".9">${g}</g>${dots}
+  <rect x="392" y="402" width="240" height="220" rx="60" fill="${AMBER}" opacity=".55" filter="url(#blur${id})"/>
+  <rect x="382" y="382" width="260" height="260" rx="58" fill="url(#cap${id})"/>
+  <rect x="412" y="398" width="200" height="190" rx="42" fill="#1F2126"/>`;
+  return base(id,inner,defs);
+}
+
+// E · Key F: an F made of lit keycaps on a 3 × 5 grid.
+const FCELLS=new Set(["0,0","1,0","2,0","0,1","0,2","1,2","0,3","0,4"]);
+function E(id){
+  const s=112,gp=16,x0=512-(3*s+2*gp)/2,y0=512-(5*s+4*gp)/2;let keys="",glow="";
+  const defs=`<linearGradient id="lit${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD58A"/><stop offset="1" stop-color="#E29C2E"/></linearGradient>
+  <linearGradient id="off${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2D33"/><stop offset="1" stop-color="#17191D"/></linearGradient>`;
+  for(let r=0;r<5;r++)for(let c=0;c<3;c++){const x=x0+c*(s+gp),y=y0+r*(s+gp),on=FCELLS.has(c+","+r);
+    if(on)glow+=`<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="${AMBER}"/>`;
+    keys+=`<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="24" fill="url(#${on?"lit":"off"}${id})"/>`+
+      `<rect x="${x+14}" y="${y+10}" width="${s-28}" height="${s-34}" rx="16" fill="#fff" opacity="${on?.18:.04}"/>`;}
+  return base(id,`<g filter="url(#blur${id})" opacity=".8">${glow}</g>${keys}`,defs);
+}
+
+// F · Layers: Studio's paint layer (WASD) floating over a colour background.
+function F(id){
+  const dia=(y,fill,extra="")=>`<path d="M512 ${y-150} L792 ${y} L512 ${y+150} L232 ${y} Z" fill="${fill}" stroke="${fill}" stroke-width="44" stroke-linejoin="round" ${extra}/>`;
+  const defs=`<linearGradient id="rb${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FD6FF"/><stop offset=".5" stop-color="#B45CFF"/><stop offset="1" stop-color="#FF5C7A"/></linearGradient>
+  <linearGradient id="am${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD58A"/><stop offset="1" stop-color="#E29C2E"/></linearGradient>`;
+  // WASD on the top layer, in isometric key positions.
+  const key=(cx,cy)=>`<path d="M${cx} ${cy-34} L${cx+60} ${cy} L${cx} ${cy+34} L${cx-60} ${cy} Z" fill="#1A1408" stroke="#1A1408" stroke-width="12" stroke-linejoin="round"/>`;
+  const top=410;
+  const inner=`${dia(640,`url(#rb${id})`,`filter="url(#soft${id})" opacity=".55"`)}${dia(630,`url(#rb${id})`)}
+  ${dia(520,"#23262C",`opacity=".92"`)}
+  ${dia(top,`url(#am${id})`)}
+  ${key(512,top-78)}${key(436,top)}${key(512,top+44)}${key(588,top)}`;
+  return base(id,inner,defs);
+}
+
+// Menu-bar template glyphs (one colour, 18 × 18 points).
+const GLYPHS={
+  A:`<rect x="2" y="2" width="14" height="14" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 5.5h5M7 5.5v7M7 9h3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>`,
+  B:`<rect x="1.5" y="4.5" width="15" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4 7.5h1M6.5 7.5h1M9 7.5h1M11.5 7.5h1M4 10.5h1M6.5 10.5h5M13 10.5h1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+  C:`<path d="M2.5 10.2 L15.5 7 V12 H2.5 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 14.5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
+  D:(()=>{let s=`<rect x="6.5" y="6.5" width="5" height="5" rx="1.4" fill="currentColor"/>`;for(let i=0;i<7;i++){const a=-Math.PI/2+i*2*Math.PI/7;s+=`<circle cx="${(9+6.6*Math.cos(a)).toFixed(2)}" cy="${(9+6.6*Math.sin(a)).toFixed(2)}" r="1.25" fill="currentColor"/>`;}return s;})(),
+  E:(()=>{let s="";for(let r=0;r<5;r++)for(let c=0;c<3;c++){const on=FCELLS.has(c+","+r);s+=`<rect x="${4.6+c*3.2}" y="${1.4+r*3.2}" width="2.6" height="2.6" rx=".7" fill="currentColor" opacity="${on?1:.28}"/>`;}return s;})(),
+  F:`<path d="M9 2.5 L15 5.5 L9 8.5 L3 5.5 Z" fill="currentColor"/><path d="M3 9 L9 12 L15 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M3 12.5 L9 15.5 L15 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity=".55"/>`
+};
+const glyph=(k)=>`<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${GLYPHS[k]}</svg>`;
+
+const ICONS={A,B,C,D,E,F};
+const INFO={
+  A:["Backlit","One keycap with amber light spilling out from under it. Calm and simple, and closest to a classic Mac app icon."],
+  B:["Wave","The real 65% layout with a colour wave rolling across it. The most literal and the most colourful, but it gets busy below 32 pixels."],
+  C:["Profile","The F65 seen from the side, its light strip glowing on the desk. Nods to the side lights, but it's harder to read small."],
+  D:["Seven","A keycap ringed by the keyboard's seven palette colours, the 7 colours every onboard effect draws from."],
+  E:["Key F","An F spelled out in lit keycaps on a 3 × 5 grid, like painting keys in Studio. Bold at every size."],
+  F:["Layers","Studio's paint layer, with WASD on top, floating over a colour background layer. Explains how looks are built."]
+};
+const icon=(k)=>ICONS[k](k+(uid++));
+
+document.querySelectorAll("[data-icon]").forEach(el=>{el.innerHTML=icon(el.dataset.icon);});
+const board=document.getElementById("board");
+Object.keys(ICONS).forEach(k=>{
+  const [name,line]=INFO[k];
+  const card=document.createElement("article");card.className="card";card.setAttribute("aria-label",`${k}: ${name}`);
+  card.innerHTML=`<div class="head"><span class="letter">${k}</span><h3>${name}</h3></div>
+    <div class="icon">${icon(k)}</div>
+    <p class="muted">${line}</p>
+    <div class="row"><div class="small" aria-label="Small sizes">
+      <div style="width:64px;height:64px">${icon(k)}</div><div style="width:32px;height:32px">${icon(k)}</div><div style="width:16px;height:16px">${icon(k)}</div></div>
+      <div class="glyphs" title="Menu-bar glyph"><span class="lbl">menu bar</span><span style="width:18px;height:18px;display:block">${glyph(k)}</span><span style="width:30px;height:30px;display:block">${glyph(k)}</span></div></div>`;
+  board.appendChild(card);
+});
+["dock-dark","dock-light"].forEach(id=>{const d=document.getElementById(id);Object.keys(ICONS).forEach(k=>{d.insertAdjacentHTML("beforeend",`<div class="slot">${icon(k)}<span>${k}</span></div>`);});});
+["bar-dark","bar-light"].forEach(id=>{const b=document.getElementById(id);Object.keys(ICONS).forEach(k=>b.insertAdjacentHTML("beforeend",glyph(k)));});
+})();
+</script>
