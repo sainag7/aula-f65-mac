@@ -28,6 +28,14 @@ Wake the keyboard (press a key) if a command says it's waiting.
 | Offset | Meaning |
 |---|---|
 | `0x0a` | Current effect (1 = Fixed on, 11 = Neon stream; order = driver's effect list) |
+| `0x12` | **Side lights** effect: 0 Off, 1 Rainbow flow, 2 Colour cycle, 3 Solid, 4 Breathing (Fn + Right Shift steps 1→2→3→4→0) |
+| `0x13` | Side lights palette colour 0–6, 7 = multicolour |
+| `0x14` | Side lights brightness 0–4 |
+| `0x15` | Side lights speed 0–4 |
+
+The side lights can only be changed by saving this block, and the keyboard turns **all** its lights off for a moment
+whenever it stores the block (keys and side strips). They are not part of the live per-key frame: lighting all 58
+slots without a key over 2.4G left the side strips unchanged (tested on the F65).
 | `0x38 + 2·effect` | Brightness 0–4 for that effect |
 | `0x39 + 2·effect` | High nibble: speed 0–4 · low nibble: palette colour 0–6, 7 = multicolour |
 | `0x7e–0x7f` | `5a a5` end marker |
@@ -130,6 +138,12 @@ Output reports `13 88 <total> <seq> <0x10+n> <14 data bytes> <checksum>`; data i
 `R G B count slot…` (colours rounded to 0/85/170/255 so keys share groups; unlisted keys go dark).
 Only slots holding a real key are sent, groups go out in a fixed order (otherwise keys flicker), and
 frames may use up to 12 reports — **7-report frames confirmed working on the F65** (the F75 project caps at 6).
+
+**Saving settings while live lighting runs:** every lighting/palette save makes the keyboard turn all its lights off
+for a moment and then fade its own effect back in, and it ignores live frames until that fade-in ends. The app resends
+the live picture 20×/s for 2 s after every save, so it takes over as soon as the keyboard allows. Setting the saved
+effect's brightness to 0 keeps the fade-in dark: live colours are **not** dimmed by it (tested on the F65), but the keys
+are dark when no app is streaming.
 
 **What makes 2.4G smooth (all tested by eye on the F65):**
 - **Space the reports.** The receiver drops reports sent back to back, so keys stall and then jump. 2 ms
