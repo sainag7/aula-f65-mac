@@ -6,3 +6,9 @@ app/F65 Lighting.app/
 # Local build output and Finder files
 .DS_Store
 **/.DS_Store
+
+# Keyboard setting backups and raw dumps stay on this Mac
+backups/
+backup-*.txt
+probe*.txt
+diff44.txt

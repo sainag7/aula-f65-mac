@@ -2,7 +2,7 @@ import XCTest
 @testable import F65Kit
 final class F65KitTests: XCTestCase {
     let root=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-    func fixture() throws -> [BackupRecord] {try BackupStore().load(root.appendingPathComponent("backups/f65-20261117-042024.txt"))}
+    func fixture() throws -> [BackupRecord] {try BackupStore().load(root.appendingPathComponent("app/Tests/F65KitTests/Fixtures/settings.txt"))}
     func testPacketHeadersAndMap() throws {
         let p=SettingsPacket.receiver(4,sub:0,count:10,index:9,data:[0x5a,0xa5])
         XCTAssertEqual(Array(p.prefix(7)),[0x13,4,10,9,2,0x5a,0xa5]);XCTAssertEqual(p[19],ReceiverProtocol.checksum(p))
@@ -45,7 +45,7 @@ final class F65KitTests: XCTestCase {
         XCTAssertThrowsError(try l.setEffect(21));XCTAssertThrowsError(try l.set("brightness",value:5))
     }
     func testPaletteAllGroupsAndTrailer() throws {
-        let b=try BackupStore().load(root.appendingPathComponent("backups/palette-factory.txt"))[0].bytes
+        let b=try BackupStore().load(root.appendingPathComponent("app/Tests/F65KitTests/Fixtures/palette-factory.txt"))[0].bytes
         var p=try Palette(b);p.reset();XCTAssertEqual(p.bytes,b)
         try p.set(2,RGB(r:12,g:34,b:56))
         for g in 0..<23 {XCTAssertEqual(Array(p.bytes[g*21+6..<g*21+9]),[12,34,56])}
@@ -142,10 +142,152 @@ final class DeviceServiceTests: XCTestCase {
         wait(for:[saved],timeout:5)
         let led=try LightingBlock(m.read(0x44));XCTAssertEqual(led.effect,6);XCTAssertEqual(led.brightness(6),2);XCTAssertEqual(led.colour(6),3);XCTAssertEqual(m.writes,1)
     }
+    func testSideLightsSaveAndSurviveOtherLightingSaves() throws {
+        let m=MockTransport();let dir=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let service=DeviceService(mock:m,backups:BackupStore(directory:dir));defer{service.stop();try? FileManager.default.removeItem(at:dir)}
+        let before=try LightingBlock(m.read(0x44))
+        let done=expectation(description:"side saves");done.expectedFulfillmentCount=4
+        for (f,v) in [("sideEffect",4),("sideColour",2),("sideBrightness",3),("sideSpeed",1)] {service.perform(.lighting(f,v)){r in if case .failure(let e)=r{XCTFail(e.localizedDescription)};done.fulfill()}}
+        wait(for:[done],timeout:5)
+        var led=try LightingBlock(m.read(0x44))
+        XCTAssertEqual([led.side("sideEffect"),led.side("sideColour"),led.side("sideBrightness"),led.side("sideSpeed")],[4,2,3,1])
+        XCTAssertEqual(Array(led.bytes[0x38...]),Array(before.bytes[0x38...]),"Side changes leave the key effects alone")
+        XCTAssertEqual(led.effect,before.effect)
+        // A queued key-lighting save carries the side choices with it, and a restore puts them back.
+        var desired=led;try desired.setEffect(6);try desired.set("sideEffect",value:1)
+        let queued=expectation(description:"queued");service.perform(.lightingBlock(desired)){_ in queued.fulfill()};wait(for:[queued],timeout:5)
+        led=try LightingBlock(m.read(0x44));XCTAssertEqual(led.effect,6);XCTAssertEqual(led.side("sideEffect"),1);XCTAssertEqual(led.side("sideColour"),2)
+        let restored=expectation(description:"restored");service.perform(.restore([.init(cmd:0x44,sub:0,bytes:before.bytes)])){_ in restored.fulfill()};wait(for:[restored],timeout:5)
+        XCTAssertEqual(try LightingBlock(m.read(0x44)).side("sideEffect"),before.side("sideEffect"))
+    }
+    func testSideLightRanges() throws {
+        var l=try LightingBlock(MockTransport().read(0x44))
+        XCTAssertThrowsError(try l.set("sideEffect",value:5));XCTAssertThrowsError(try l.set("sideColour",value:8))
+        XCTAssertThrowsError(try l.set("sideBrightness",value:5));XCTAssertThrowsError(try l.set("sideSpeed",value:-1))
+        try l.set("sideColour",value:7);XCTAssertEqual(l.bytes[0x13],7)
+        XCTAssertEqual(LightingBlock.sideEffectNames.count,LightingBlock.sideEffectRange.count)
+        XCTAssertEqual(LightingBlock.sideEffectName(3),"Solid")
+    }
+    /// Streams over a mock 2.4G receiver until `until` holds or `timeout` passes.
+    private func streaming(_ m:MockTransport,mode:Mode = .solid,timeout:Double,until:()->Bool) -> DeviceService {
+        let dir=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let service=DeviceService(mock:m,backups:BackupStore(directory:dir))
+        var s=Settings();s.mode=mode;s.pref = .receiver;service.start(with:s)
+        let end=Date().addingTimeInterval(timeout)
+        while Date()<end && !until() {RunLoop.current.run(until:Date().addingTimeInterval(0.05))}
+        return service
+    }
+    func testConnectionCheckDoesNotPauseTheStream() throws {
+        let m=MockTransport(kind:.receiver);m.sendDelay=0.028   // like a real 2.4G frame
+        let service=streaming(m,mode:.wave,timeout:3){m.liveFrames>5};defer{service.stop()}
+        XCTAssertGreaterThan(m.liveFrames,5)
+        let reads=m.readLog.count,frames=m.liveFrames,start=Date()
+        // Connection checks fall due every 5 s; they must be the non-blocking request, not a read.
+        RunLoop.current.run(until:Date().addingTimeInterval(6))
+        XCTAssertGreaterThanOrEqual(m.statusRequests,1)
+        XCTAssertEqual(m.readLog.count,reads,"No blocking reads while streaming")
+        let fps=Double(m.liveFrames-frames)/Date().timeIntervalSince(start)
+        XCTAssertGreaterThan(fps,17,"About 20 frames a second kept flowing");XCTAssertLessThan(fps,21.5)
+    }
+    func testStaticLiveFrameIsResentRapidlyAfterASave() throws {
+        let m=MockTransport(kind:.receiver)
+        let service=streaming(m,timeout:3){m.liveFrames>0};defer{service.stop()}
+        RunLoop.current.run(until:Date().addingTimeInterval(2.2))   // let the post-load burst end: a still picture is now only kept alive
+        let idle=m.liveFrames;RunLoop.current.run(until:Date().addingTimeInterval(1));let idleRate=m.liveFrames-idle
+        XCTAssertLessThanOrEqual(idleRate,3,"A still picture is only re-sent as a keep-alive")
+        let saved=expectation(description:"saved")
+        service.perform(.lighting("sideColour",3)){r in if case .failure(let e)=r{XCTFail(e.localizedDescription)};saved.fulfill()}
+        wait(for:[saved],timeout:5)
+        let ev=m.events,w=ev.lastIndex(of:"write 4")!
+        XCTAssertEqual(ev[w+1],"read 44","Verified straight after the write")
+        // The cached block was read when the keyboard was loaded, so the save reads 0x44 only to verify.
+        XCTAssertEqual(ev[..<w].suffix(4).filter{$0=="read 44"}.count,0)
+        let after=m.liveFrames;RunLoop.current.run(until:Date().addingTimeInterval(1))
+        XCTAssertGreaterThanOrEqual(m.liveFrames-after,15,"The live picture is re-sent on every tick after a save")
+        XCTAssertEqual(try LightingBlock(m.read(0x44)).side("sideColour"),3)
+    }
+    func testNoLiveFrameAfterWriteWhenNotStreaming() throws {
+        let m=MockTransport(kind:.receiver)
+        let service=streaming(m,mode:.off,timeout:3){m.readLog.contains(0x49)};defer{service.stop()}
+        let saved=expectation(description:"saved");service.perform(.lighting("sideEffect",2)){_ in saved.fulfill()};wait(for:[saved],timeout:5)
+        XCTAssertEqual(m.liveFrames,0)
+    }
     func testHiddenRowsMaskedAfterRemap() {
         var s=Settings();s.mode = .solid
         let f=FrameRenderer.render(s,map:KeyMap.fallback,time:0,receiver:false)
         for slot in stride(from:0,to:126,by:6) {XCTAssertEqual(f[slot],.black)}
         XCTAssertEqual(f[75],.black);XCTAssertNotEqual(f[9],.black)
+    }
+}
+
+/// Per-key colours over animated backgrounds (Live lighting).
+final class KeyColourTests: XCTestCase {
+    let wasd:[String:RGB]=["w":RGB(r:255,g:0,b:0),"a":RGB(r:255,g:0,b:0),"s":RGB(r:255,g:0,b:0),"d":RGB(r:255,g:0,b:0),"esc":RGB(r:0,g:200,b:255)]
+
+    /// Decode 2.4G reports back to slot → colour, the way the keyboard reads them.
+    func decode(_ reports:[[UInt8]])->[Int:RGB] {
+        var data:[UInt8]=[]
+        for r in reports {let n=Int(r[4])-0x10;data+=r[5..<(5+n)]}
+        var out:[Int:RGB]=[:];var i=0
+        while i+4<=data.count {let c=RGB(r:data[i],g:data[i+1],b:data[i+2]);let n=Int(data[i+3]);for s in data[(i+4)..<min(data.count,i+4+n)] {out[Int(s)]=c};i+=4+n}
+        return out
+    }
+
+    func testGeometryMatchesPhysicalKeys() {
+        XCTAssertEqual(KeyGeometry.keys.map(\.id),PhysicalKey.ids)
+        XCTAssertEqual(KeyGeometry.keys.count,67)
+        let k=Dictionary(uniqueKeysWithValues:KeyGeometry.keys.map{($0.id,$0)})
+        XCTAssertEqual(k["esc"]!.cx,0.5);XCTAssertEqual(k["space"]!.cx,3.75+3.125);XCTAssertEqual(k["left"]!.cx,12.5+0.5+0.5)
+        XCTAssertEqual(Set(KeyGeometry.snakeOrder.values).count,67)
+    }
+
+    func testKeyColoursSitOnTopOfEveryBackground() {
+        for mode in [Mode.dark,.solid,.wave,.effect] {
+            for effect in mode == .effect ? Backgrounds.available:[16] {
+                var s=Settings();s.mode=mode;s.effect=effect;s.keyColors=wasd;s.keyColors["nope"]=RGB(r:1,g:2,b:3)
+                for t in [0.0,1.3,7.7] {
+                    let f=FrameRenderer.render(s,map:KeyMap.fallback,time:t,receiver:false)
+                    for (id,c) in wasd {XCTAssertEqual(f[PhysicalKey.slots[id]!],c,"\(mode) \(effect) \(id)")}
+                    for slot in stride(from:0,to:126,by:6) {XCTAssertEqual(f[slot],.black)}   // hidden row stays dark
+                }
+            }
+        }
+        var dark=Settings();dark.mode = .dark;dark.keyColors=["w":RGB(r:9,g:9,b:9)]
+        let f=FrameRenderer.render(dark,map:KeyMap.fallback,time:0,receiver:false)
+        XCTAssertEqual(f.filter{!$0.isBlack}.count,1)
+    }
+
+    func testEffectsAreDeterministicAndAnimate() {
+        for e in Backgrounds.available {
+            let a=Backgrounds.frame(effect:e,time:2.5,speed:2,multicolour:true,color:.black)
+            XCTAssertEqual(a,Backgrounds.frame(effect:e,time:2.5,speed:2,multicolour:true,color:.black),"effect \(e)")
+            XCTAssertTrue(a.contains{!$0.isBlack} || e==14 || e==15,"effect \(e) all dark")
+        }
+        for e in [10,16,13] {XCTAssertNotEqual(Backgrounds.frame(effect:e,time:0,speed:2,multicolour:true,color:.black),Backgrounds.frame(effect:e,time:0.6,speed:2,multicolour:true,color:.black))}
+        // A chosen colour is used when multicolour is off (Snake in blue: only blue shades).
+        let blue=Backgrounds.frame(effect:10,time:1,speed:2,multicolour:false,color:RGB(r:0,g:0,b:255))
+        XCTAssertTrue(blue.allSatisfy{$0.r==0 && $0.g==0})
+    }
+
+    func testReceiverKeepsKeyColoursExactWithinBudget() {
+        for e in Backgrounds.available {
+            var s=Settings();s.mode = .effect;s.effect=e;s.keyColors=wasd
+            let pinned=FrameRenderer.pinnedSlots(s)
+            for t in [0.0,0.9,3.3,11.1] {
+                let f=FrameRenderer.render(s,map:KeyMap.fallback,time:t,receiver:true)
+                let reports=ReceiverProtocol.reports(f,slots:PhysicalKey.indices.flatMap{$0},pinned:pinned)
+                XCTAssertLessThanOrEqual(reports.count,ReceiverProtocol.maxReports,"effect \(e) t \(t)")
+                let got=decode(reports)
+                for (id,c) in wasd {XCTAssertEqual(got[PhysicalKey.slots[id]!],c,"effect \(e) t \(t) key \(id)")}
+            }
+        }
+    }
+
+    func testPinnedColoursSurviveAFrameThatMustBeMerged() {
+        // Every key a different colour forces merging; the pinned key must keep its exact colour.
+        var colors:[RGB]=(0..<126).map{(i:Int)->RGB in let r=UInt8(i*37%256);let g=UInt8(i*79%256);let b=UInt8(i*13%256);return RGB(r:r,g:g,b:b)}
+        let w=PhysicalKey.slots["w"]!;colors[w]=RGB(r:201,g:13,b:77)
+        let reports=ReceiverProtocol.reports(colors,slots:PhysicalKey.indices.flatMap{$0},pinned:[w])
+        XCTAssertLessThanOrEqual(reports.count,12);XCTAssertEqual(decode(reports)[w],RGB(r:201,g:13,b:77))
     }
 }

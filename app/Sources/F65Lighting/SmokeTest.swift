@@ -49,21 +49,35 @@ import F65Kit
                 model.updateLive{$0.pref=pref};await pause(0.1);try await ready(model)
                 for e in 1...18 {try await edit(model,.effect(e));try require(model.device.snapshot?.lighting.effect==e,"Effect \(e)")}
                 for field in ["brightness","speed","colour"] {let end=field=="colour" ? 7:4;for value in 0...end {try await edit(model,.lighting(field,value));let led=model.device.snapshot!.lighting;let got=field=="brightness" ? led.brightness(18):field=="speed" ? led.speed(18):led.colour(18);try require(got==value,"\(field) \(value)")}}
+                for (field,end) in [("sideEffect",LightingBlock.sideEffectMax),("sideColour",7),("sideBrightness",4),("sideSpeed",4)] {for value in 0...end {try await edit(model,.lighting(field,value));try require(model.device.snapshot!.lighting.side(field)==value,"\(field) \(value)")}}
                 var colors=Palette.factory;colors[2]=RGB(r:17,g:33,b:129);try await edit(model,.palette(colors));try require(model.device.snapshot?.palette.colours==colors,"Palette edit")
                 try await edit(model,.paletteReset);try require(model.device.snapshot?.palette.colours==Palette.factory,"Palette reset")
                 for layer:UInt8 in [0,1] {let original=(layer==0 ? model.device.snapshot!.base:model.device.snapshot!.fn).entry(9)
                     try await edit(model,.remap(slot:9,layer:layer,entry:KeyEntry.named("mute")!,allowProtected:false));try require((layer==0 ? model.device.snapshot!.base:model.device.snapshot!.fn).entry(9).bytes==[2,0,0,0xe2],"Remap")
                     try await edit(model,.remap(slot:9,layer:layer,entry:original,allowProtected:false))}
                 let saved=model.device.snapshot!;try await edit(model,.backup);let backup=model.service.backups.list()[0];try await edit(model,.effect(1));try await edit(model,.restore(try model.service.backups.load(backup)));try require(model.device.snapshot==saved,"Restore round trip")
-                pass("\(pref.title): 18 effects, every brightness/speed/colour value, palette edit/reset, both-layer remaps and restore")
+                pass("\(pref.title): 18 effects, every brightness/speed/colour value, every side light setting, palette edit/reset, both-layer remaps and restore")
                 try await edit(model,.effect(1));try await edit(model,.lighting("brightness",4))
                 for mode in [Mode.solid,.wave,.custom] {model.updateLive{$0.mode=mode;$0.paused=false}
                     // The 5 s keyboard poll briefly pauses streaming; wait for a frame instead of a fixed delay.
                     for _ in 0..<30 {await pause(0.1);if model.frame?.count==126 {break}}
                     try require(model.frame?.count==126,"Live frame \(mode)");try require(model.frame![0].isBlack,"Hidden LED mask")}
+                // Per-key colours over an animated background (Snake, then Waterfall).
+                let red=RGB(r:255,g:0,b:0);model.liveSelection=["w","a","s","d"];model.applyKeyColour(red)
+                for effect in [10,16] {model.updateLive{$0.mode = .effect;$0.effect=effect;$0.paused=false}
+                    let want=red.scaled(model.live.brightness);var ok=false
+                    for _ in 0..<30 {await pause(0.1);if let f=model.frame,f.count==126,["w","a","s","d"].allSatisfy({f[PhysicalKey.slots[$0]!]==want}) {ok=true;break}}
+                    try require(ok,"Key colours over \(Backgrounds.name(effect))")}
+                model.clearKeyColours();model.liveSelection=[];try require(model.live.keyColors.isEmpty,"Clear key colours")
+                pass("\(pref.title): WASD key colours over Snake and Waterfall, then cleared")
                 model.updateLive{$0.paused=true};await pause(0.2);try require(model.frame==nil,"Pause stream")
                 model.updateLive{$0.mode = .off;$0.paused=false};pass("\(pref.title): Solid, Wave, Custom, Pause and Off")
             }
+            model.section="Live lighting";await pause(0.3);w=try await loadedWeb(window)
+            model.liveSelection=["w","a"];await pause(0.4)
+            let sel=try await w.evaluateJavaScript("window.f65.inspect()") as! [String:Any]
+            try require(Set((sel["selection"] as? [String]) ?? [])==["w","a"],"Live multi-select bridge")
+            model.liveSelection=[];pass("Live lighting: multi-key selection reaches the keyboard view")
             model.section="Lighting";await pause(0.3);w=try await loadedWeb(window)
             try await w.evaluateJavaScript("window.f65.setState({reduceMotion:true});window.f65.setActive(false)")
             let state=try await w.evaluateJavaScript("window.f65.inspect()") as! [String:Any];try require(state["active"] as? Bool==false,"Inactive renderer")
