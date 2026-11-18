@@ -8,14 +8,21 @@ private final class HIDInbox: PacketChannel {
     let condition=NSCondition()
     var packets:[[UInt8]]=[]
     var statusChanged=false
+    /// First settings packet sent since the last reply of any kind. If replies stop arriving while the
+    /// receiver still answers other programs, the input path has gone stale and the hub rebuilds it.
+    var unansweredSince:Date?
     init(_ device:IOHIDDevice) { self.device=device }
+    var stale:Bool {condition.lock();defer{condition.unlock()};return unansweredSince.map{Date().timeIntervalSince($0)>4} ?? false}
     func accept(_ bytes:[UInt8]) {
         condition.lock();defer { condition.unlock() }
+        unansweredSince=nil
         guard bytes.count==20,bytes[0]==0x13,ReceiverProtocol.checksum(bytes)==bytes[19] else { return }
         if bytes[1]==0x0a {statusChanged=true} else {packets.append(bytes);if packets.count>256 {packets.removeFirst()}}
         condition.signal()
     }
     func send(_ p:[UInt8]) throws {
+        // Live frames (0x88) get no reply; only settings packets count toward staleness.
+        if p.count>1,p[1] != 0x88 {condition.lock();if unansweredSince==nil {unansweredSince=Date()};condition.unlock()}
         let r=p.withUnsafeBufferPointer {IOHIDDeviceSetReport(device,kIOHIDReportTypeOutput,0x13,$0.baseAddress!,p.count)}
         try HIDHub.check(r)
     }
@@ -64,6 +71,8 @@ public final class HIDHub {
         if p(kIOHIDVendorIDKey)==0x3554 && p(kIOHIDPrimaryUsagePageKey)==0xff02 {return .receiver};return nil
     }
     public func connection(preference:String) throws -> Transport {
+        // Receiver open but silent for over 4 s of requests: rebuild the manager and its input callback.
+        if let inbox,inbox.stale {restart()}
         lock.lock();let available=devices;lock.unlock()
         let candidates=available.filter {d in guard let k=kind(d) else{return false};return preference=="auto" || preference==k.rawValue}.sorted {kind($0) == .cable && kind($1) != .cable}
         guard let d=candidates.first else {disconnect();throw F65Error.notFound}
@@ -90,5 +99,11 @@ public final class HIDHub {
         throw F65Error.invalid(String(format:"HID I/O failed (0x%08x).",UInt32(bitPattern:r)))
     }
     // Owned for the app lifetime. Stop after the worker is quiescent.
-    public func stop() {disconnect();if let m=manager {IOHIDManagerCancel(m);cancelled.wait();manager=nil;lock.lock();inboxes=[:];lock.unlock()}}
+    public func stop() {disconnect();if let m=manager {IOHIDManagerCancel(m);cancelled.wait();manager=nil;lock.lock();inboxes=[:];devices=[];lock.unlock()}}
+    /// Fresh manager, callbacks and device list, without waiting for the async matching callback.
+    func restart() {
+        stop();start()
+        guard let m=manager,let found=IOHIDManagerCopyDevices(m) as? Set<IOHIDDevice> else {return}
+        lock.lock();devices.formUnion(found);lock.unlock()
+    }
 }
