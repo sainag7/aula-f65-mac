@@ -55,12 +55,12 @@ struct KeysView:View {
                 if entry.protected {Label("Protected Fn or connection binding. Changing it asks for confirmation and backs up the original first.",systemImage:"lock.shield").foregroundStyle(.orange).font(.callout)}
                 HStack{Image(systemName:"magnifyingglass").foregroundStyle(.secondary);TextField(capturing ? "Press a key on your keyboard…":"Search: mute, ⌘, F5, disable…",text:$query).textFieldStyle(.plain)}
                     .padding(7).background(Color(nsColor:.textBackgroundColor),in:RoundedRectangle(cornerRadius:7)).overlay(RoundedRectangle(cornerRadius:7).strokeBorder(Color.secondary.opacity(0.3)))
-                Button {capturing ? stopCapture():startCapture()} label:{Label(capturing ? "Listening… press a key":"Press a key to copy it",systemImage:"keyboard")}.tint(capturing ? .accentColor:nil).buttonStyle(.bordered)
+                Button {capturing ? stopCapture():startCapture()} label:{Label(capturing ? "Listening… press a key":"Press a key to copy it",systemImage:"keyboard")}.tint(capturing ? Theme.accent:nil).buttonStyle(.bordered)
                 ScrollView {
                     LazyVStack(alignment:.leading,spacing:1) {
                         ForEach(results,id:\.self) {t in
                             Button {send(t)} label:{HStack{Text(t.label);Spacer();Text(t.group).font(.caption).foregroundStyle(.secondary)}.padding(.horizontal,8).padding(.vertical,5).contentShape(Rectangle())}
-                                .buttonStyle(.plain).background(t==results.first && !query.isEmpty ? Color.accentColor.opacity(0.13):.clear,in:RoundedRectangle(cornerRadius:6))
+                                .buttonStyle(.plain).background(t==results.first && !query.isEmpty ? Theme.accent.opacity(0.13):.clear,in:RoundedRectangle(cornerRadius:6))
                         }
                     }
                 }.frame(height:190)
@@ -69,7 +69,7 @@ struct KeysView:View {
                 Button("Restore this key"){model.restoreKey()}.help("Back to the binding loaded when this app session connected")
                 Text("Saving writes the \(model.layer==0 ? "Base":"Fn") layer.\(model.device.link == .receiver ? " The USB cable is recommended for key changes.":"")").font(.caption).foregroundStyle(.secondary)
             }
-            .padding(16).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:12)).disabled(!model.canWrite)
+            .padding(16).background(Theme.panel,in:RoundedRectangle(cornerRadius:12)).disabled(!model.canWrite)
         } else {Text("Connect and wake the keyboard to load both layers.").foregroundStyle(.secondary)}
     }
     /// Base-layer keys that differ from the F65's default layout, each with a one-click reset.
@@ -84,7 +84,7 @@ struct KeysView:View {
                     HStack{Text(KeyLabel.long(id)).fontWeight(.semibold);Text("→ \(e.description)").foregroundStyle(.secondary);Spacer()
                         Button{model.selected=id;model.remap(KeyEntry(KeyMap.fallback.entry(PhysicalKey.slots[id]!)))} label:{Label("Reset",systemImage:"arrow.counterclockwise")}.controlSize(.small).disabled(!model.canWrite)}
                 }
-            }.padding(12).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:10))
+            }.padding(12).background(Theme.panel,in:RoundedRectangle(cornerRadius:10))
         }
     }
     func send(_ t:Target) {

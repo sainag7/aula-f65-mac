@@ -28,7 +28,7 @@ struct HistoryView:View {
                     Text(r.date.map{Self.format($0)} ?? "").font(.caption.monospaced()).foregroundStyle(.secondary)
                     Button {model.goBack(to:r.url)} label:{Label("Go back",systemImage:"arrow.uturn.backward")}.disabled(!model.canWrite)
                 }
-                .padding(10).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:10))
+                .padding(10).background(Theme.panel,in:RoundedRectangle(cornerRadius:10))
             }
             Text("Thumbnails are drawn from each restore point's lighting. App looks aren't saved on the keyboard, so they don't appear here; use Undo for those. Going back writes only the parts that differ from now.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
         }

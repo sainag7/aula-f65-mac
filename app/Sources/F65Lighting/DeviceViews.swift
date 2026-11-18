@@ -11,7 +11,7 @@ struct RestorePointsView:View {
             HStack{Button("Back up now"){model.edit(.backup)}.disabled(!model.canWrite);Button("Import…"){model.importPoint()};Button("Reveal folder"){NSWorkspace.shared.open(model.service.backups.directory)};Spacer();Button("Refresh list"){model.refreshPoints()}}
             if model.points.isEmpty {Label("No restore points yet. Back up the keyboard or import a file from the repository’s backups folder.",systemImage:"clock.arrow.circlepath").padding(24).foregroundStyle(.secondary)}
             ForEach(model.points,id:\.self){url in
-                HStack{VStack(alignment:.leading,spacing:4){Text(url.lastPathComponent).font(.system(.callout,design:.monospaced));Text(url.deletingLastPathComponent().path).font(.caption).foregroundStyle(.secondary).lineLimit(1)};Spacer();Button("Reveal"){NSWorkspace.shared.activateFileViewerSelecting([url])};Button("Restore…"){model.restore(url)}.disabled(!model.canWrite)}.padding(14).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:8))
+                HStack{VStack(alignment:.leading,spacing:4){Text(url.lastPathComponent).font(.system(.callout,design:.monospaced));Text(url.deletingLastPathComponent().path).font(.caption).foregroundStyle(.secondary).lineLimit(1)};Spacer();Button("Reveal"){NSWorkspace.shared.activateFileViewerSelecting([url])};Button("Restore…"){model.restore(url)}.disabled(!model.canWrite)}.padding(14).background(Theme.panel,in:RoundedRectangle(cornerRadius:8))
             }
             if model.device.link == .receiver {Text("Use the USB cable for large restores when possible.").foregroundStyle(.secondary)}
         }
@@ -29,7 +29,7 @@ struct MacrosView:View {
                 DisclosureGroup("Raw macro bytes",isExpanded:$showBytes){Text(hex(b)).font(.system(.caption,design:.monospaced)).textSelection(.enabled)}
             } else {Text("Macro memory could not be read.").foregroundStyle(.secondary)}
             Button("Read again"){model.edit(.refresh)}.disabled(model.busy)
-        }.padding(24).frame(maxWidth:.infinity,alignment:.leading).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:12))
+        }.padding(24).frame(maxWidth:.infinity,alignment:.leading).background(Theme.panel,in:RoundedRectangle(cornerRadius:12))
     }
 }
 struct DisplaySettingsView:View {

@@ -71,8 +71,8 @@ enum Board {
             }
             if style.marked.contains(k.id) {g.fill(Path(ellipseIn:CGRect(x:r.maxX-m.u*0.22,y:r.minY+m.u*0.08,width:m.u*0.14,height:m.u*0.14)),with:.color(.cyan))}
             if style.locked.contains(k.id) {g.stroke(Path(roundedRect:r.insetBy(dx:1,dy:1),cornerRadius:m.u*0.1),with:.color(.orange.opacity(0.85)),lineWidth:1.5)}
-            if style.selection.contains(k.id) {g.stroke(Path(roundedRect:r.insetBy(dx:-1.5,dy:-1.5),cornerRadius:m.u*0.14),with:.color(.accentColor),style:StrokeStyle(lineWidth:2,dash:[4,3]))}
-            if style.ring==k.id {g.stroke(Path(roundedRect:r.insetBy(dx:-2,dy:-2),cornerRadius:m.u*0.15),with:.color(.accentColor),lineWidth:2.5)}
+            if style.selection.contains(k.id) {g.stroke(Path(roundedRect:r.insetBy(dx:-1.5,dy:-1.5),cornerRadius:m.u*0.14),with:.color(Theme.accent),style:StrokeStyle(lineWidth:2,dash:[4,3]))}
+            if style.ring==k.id {g.stroke(Path(roundedRect:r.insetBy(dx:-2,dy:-2),cornerRadius:m.u*0.15),with:.color(Theme.accent),lineWidth:2.5)}
         }
     }
 }
@@ -114,7 +114,7 @@ struct LooksView:View {
             HStack(alignment:.top,spacing:14) {
                 VStack(alignment:.leading,spacing:6) {
                     KeyboardView(model:model).frame(height:300)
-                    Text(model.previewLook != nil ? "Previewing \(model.previewLook!.name) · not applied\(model.tryOn && model.canTryOn ? " · showing on your keyboard":"")":"Preview is approximate · hover a look to preview it").font(.caption).foregroundStyle(model.previewLook != nil ? Color.accentColor:.secondary)
+                    Text(model.previewLook != nil ? "Previewing \(model.previewLook!.name) · not applied\(model.tryOn && model.canTryOn ? " · showing on your keyboard":"")":"Preview is approximate · hover a look to preview it").font(.caption).foregroundStyle(model.previewLook != nil ? Theme.accent:.secondary)
                 }
                 NowCard(model:model).frame(width:250)
             }
@@ -154,8 +154,8 @@ struct LookCard:View {
                 HStack{LookBadge(look:look);Spacer();if look.reactsToTyping{Image(systemName:"keyboard.badge.ellipsis").foregroundStyle(.secondary).help("Reacts to typing")}}
             }
             .padding(8).frame(maxWidth:.infinity,alignment:.leading)
-            .background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:10))
-            .overlay(RoundedRectangle(cornerRadius:10).strokeBorder(isCurrent ? Color.accentColor:(hovering ? Color.secondary.opacity(0.45):Color.secondary.opacity(0.15)),lineWidth:isCurrent ? 2:1))
+            .background(Theme.panel,in:RoundedRectangle(cornerRadius:10))
+            .overlay(RoundedRectangle(cornerRadius:10).strokeBorder(isCurrent ? Theme.accent:(hovering ? Color.secondary.opacity(0.45):Color.secondary.opacity(0.15)),lineWidth:isCurrent ? 2:1))
             .overlay(alignment:.topTrailing) {
                 Button {model.toggleFavourite(look.id)} label:{Image(systemName:look.favourite ? "star.fill":"star").font(.caption).padding(6).background(.black.opacity(0.55),in:Circle())}
                     .buttonStyle(.plain).foregroundStyle(look.favourite ? Color.yellow:.white).padding(12)
@@ -199,7 +199,7 @@ struct NowCard:View {
             if !model.canTryOn {Text("Try on works on the cable, or over 2.4G while the saved effect is Fixed.").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)}
         }
         .padding(14).frame(maxWidth:.infinity,minHeight:300,alignment:.topLeading)
-        .background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:12))
+        .background(Theme.panel,in:RoundedRectangle(cornerRadius:12))
     }
     func describe(_ l:Look)->String {
         if l.kind == .keyboard {return "Saved as \(LightingBlock.names[l.effect-1]) (effect \(l.effect) of 18). Keeps working with the app closed."}
@@ -219,8 +219,8 @@ struct OnboardEffectsStrip:View {
                     Button {model.applyEffect(e)} label:{
                         HStack(spacing:6){Text(String(format:"%02d",e)).font(.caption.monospaced()).foregroundStyle(.secondary);Text(LightingBlock.names[e-1]).font(.callout).lineLimit(1);Spacer(minLength:0);if Look.reactiveEffects.contains(e){Image(systemName:"keyboard.badge.ellipsis").font(.caption2).foregroundStyle(.secondary)}}
                             .padding(.horizontal,9).padding(.vertical,7).frame(maxWidth:.infinity,alignment:.leading)
-                            .background(on ? Color.accentColor.opacity(0.18):Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:7))
-                            .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(on ? Color.accentColor:Color.secondary.opacity(0.15)))
+                            .background(on ? Theme.accent.opacity(0.18):Theme.panel,in:RoundedRectangle(cornerRadius:7))
+                            .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(on ? Theme.accent:Color.secondary.opacity(0.15)))
                     }.buttonStyle(.plain)
                     .onHover {inside in if model.active,let led=model.lighting {var l=Look.capture(led);l.effect=e;l.brightness=led.brightness(e);l.speed=led.speed(e);l.colour=led.colour(e);l.name=LightingBlock.names[e-1];model.previewLook=inside ? l:nil}}
                     .help(Look.reactiveEffects.contains(e) ? "Reacts to typing":"Saved on the keyboard")
@@ -264,14 +264,14 @@ struct QuickTuneBar:View {
                 }.popover(isPresented:$model.colourPopover,arrowEdge:.bottom){ColourChooser(model:model).frame(width:320)}
             }
             VStack(alignment:.leading,spacing:6) {
-                Text("Edge glow").font(.subheadline.weight(.semibold))
-                Button {edgeOpen=true} label:{HStack(spacing:6){Text(LightingBlock.sideEffectName(led?.side("sideEffect") ?? 0));Image(systemName:"chevron.down").font(.caption2)}}
-                    .popover(isPresented:$edgeOpen,arrowEdge:.bottom){EdgeGlowView(model:model).padding(16).frame(width:420)}
+                Text("Side lights").font(.subheadline.weight(.semibold))
+                Button {edgeOpen=true} label:{HStack(spacing:6){Image(systemName:"light.strip.2");Text(LightingBlock.sideEffectName(led?.side("sideEffect") ?? 0));Image(systemName:"chevron.down").font(.caption2)}}
+                    .popover(isPresented:$edgeOpen,arrowEdge:.bottom){SideLightsView(model:model).padding(16).frame(width:420)}
                     .disabled(led==nil)
             }
             Spacer(minLength:0)
         }
-        .padding(14).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:12))
+        .padding(14).background(Theme.panel,in:RoundedRectangle(cornerRadius:12))
         .disabled(led==nil && !app)
     }
     @ViewBuilder func swatch(_ app:Bool,_ led:LightingBlock?,_ e:Int,_ cur:Look?)->some View {
@@ -304,7 +304,7 @@ struct ColourChooser:View {
                         Button {decide=nil;model.setColourSlot(i)} label:{
                             ZStack{if i==7 {AngularGradient(colors:[.red,.yellow,.green,.cyan,.blue,.purple,.red],center:.center)} else {model.palette[i].color}}
                                 .frame(width:28,height:28).clipShape(RoundedRectangle(cornerRadius:7))
-                                .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(led.colour(led.effect)==i ? Color.accentColor:Color.primary.opacity(0.25),lineWidth:led.colour(led.effect)==i ? 2.5:1))
+                                .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(led.colour(led.effect)==i ? Theme.accent:Color.primary.opacity(0.25),lineWidth:led.colour(led.effect)==i ? 2.5:1))
                         }.buttonStyle(.plain).accessibilityLabel(i==7 ? "Multicolour":"Keyboard colour \(i+1)").help(i==7 ? "Multicolour":"Keyboard colour \(i+1)")
                     }
                 }
@@ -364,33 +364,36 @@ struct PaletteEditor:View {
     }
 }
 
-/// Side light strips: the glow along the bottom-left and bottom-right edges. Saved on the keyboard.
-struct EdgeGlowView:View {
+/// Side light strips: the light along the bottom-left and bottom-right edges. Saved on the keyboard.
+struct SideLightsView:View {
     @ObservedObject var model:AppModel
+    /// Narrow columns (Studio) use a menu instead of a segmented control.
+    var compact=false
     var body:some View {
         if let led=model.lighting {
             let effect=led.side("sideEffect")
             VStack(alignment:.leading,spacing:14) {
-                Text("Edge glow").font(.headline)
-                Text("The side light strips along the bottom edges. Saved on the keyboard and separate from the key lighting, so they also run under app looks. Fn + Right Shift steps through them too.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
-                Picker("Edge glow effect",selection:Binding(get:{effect},set:{model.edit(.lighting("sideEffect",$0))})) {
+                Text("Side lights").font(.headline)
+                Text("The light strips along the bottom-left and bottom-right edges. Saved on the keyboard and separate from the key lighting, so they also run under app looks. Fn + Right Shift steps through them too.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                let picker=Picker("Side lights effect",selection:Binding(get:{effect},set:{model.edit(.lighting("sideEffect",$0))})) {
                     ForEach(LightingBlock.sideEffectRange,id:\.self){Text(LightingBlock.sideEffectName($0)).tag($0)}
-                }.pickerStyle(.segmented).labelsHidden()
+                }.labelsHidden()
+                if compact {picker.pickerStyle(.menu)} else {picker.pickerStyle(.segmented)}
                 if effect != 0 {
                     level("Brightness","sideBrightness",led.side("sideBrightness"))
                     if LightingBlock.sideUsesSpeed(effect) {level("Speed","sideSpeed",led.side("sideSpeed"))}
                     if LightingBlock.sideUsesColour(effect) {
-                        HStack(spacing:8){Text("Colour").frame(width:80,alignment:.leading);ForEach(0..<8,id:\.self){i in
-                            Button {model.edit(.lighting("sideColour",i))} label:{ZStack{if i==7 {AngularGradient(colors:[.red,.yellow,.green,.cyan,.blue,.purple,.red],center:.center)} else {model.palette[i].color}}.frame(width:24,height:24).clipShape(Circle()).overlay(Circle().strokeBorder(led.side("sideColour")==i ? Color.accentColor:Color.primary.opacity(0.25),lineWidth:led.side("sideColour")==i ? 2.5:1))}
-                                .buttonStyle(.plain).accessibilityLabel(i==7 ? "Edge glow multicolour":"Edge glow keyboard colour \(i+1)")
+                        HStack(spacing:compact ? 5:8){Text("Colour").frame(width:compact ? 70:80,alignment:.leading);ForEach(0..<8,id:\.self){i in
+                            Button {model.edit(.lighting("sideColour",i))} label:{ZStack{if i==7 {AngularGradient(colors:[.red,.yellow,.green,.cyan,.blue,.purple,.red],center:.center)} else {model.palette[i].color}}.frame(width:compact ? 20:24,height:compact ? 20:24).clipShape(Circle()).overlay(Circle().strokeBorder(led.side("sideColour")==i ? Theme.accent:Color.primary.opacity(0.25),lineWidth:led.side("sideColour")==i ? 2.5:1))}
+                                .buttonStyle(.plain).accessibilityLabel(i==7 ? "Side lights multicolour":"Side lights keyboard colour \(i+1)")
                         }}
                     }
                 }
             }.disabled(!model.canWrite)
-        } else {Text("Edge glow loads after the keyboard answers.").foregroundStyle(.secondary)}
+        } else {Text("Side lights load after the keyboard answers.").foregroundStyle(.secondary)}
     }
     func level(_ label:String,_ field:String,_ value:Int)->some View {
-        HStack{Text(label).frame(width:80,alignment:.leading);Picker(label,selection:Binding(get:{value},set:{model.edit(.lighting(field,$0))})){ForEach(0...4,id:\.self){Text("\($0)").tag($0)}}.pickerStyle(.segmented).labelsHidden().frame(width:220)}
+        HStack{Text(label).frame(width:compact ? 70:80,alignment:.leading);Picker(label,selection:Binding(get:{value},set:{model.edit(.lighting(field,$0))})){ForEach(0...4,id:\.self){Text("\($0)").tag($0)}}.pickerStyle(.segmented).labelsHidden().frame(width:compact ? 190:220)}
     }
 }
 
@@ -404,7 +407,7 @@ struct ToastView:View {
                 if t.undo {Button{model.undo()} label:{Label("Undo",systemImage:"arrow.uturn.backward")}.keyboardShortcut("z",modifiers:.command)}
             }
             .padding(.leading,14).padding(.trailing,t.undo ? 8:14).padding(.vertical,8)
-            .background(.regularMaterial,in:RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).strokeBorder(Color.primary.opacity(0.12)))
+            .background(Theme.raised,in:RoundedRectangle(cornerRadius:10)).overlay(RoundedRectangle(cornerRadius:10).strokeBorder(Color.primary.opacity(0.12)))
             .shadow(radius:12,y:6)
             .transition(reduced ? .opacity:.move(edge:.bottom).combined(with:.opacity))
             .id(t.id)

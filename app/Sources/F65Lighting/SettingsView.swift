@@ -18,6 +18,8 @@ struct SettingsView:View {
                 Text("The layout file drives the menu bar's Custom layout mode.").font(.caption).foregroundStyle(.secondary)
             }
             Divider()
+            SideLightsView(model:model)
+            Divider()
             DisclosureGroup("Macros (read only)",isExpanded:$macros){MacrosView(model:model).padding(.top,8)}
         }
     }

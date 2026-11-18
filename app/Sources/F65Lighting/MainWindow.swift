@@ -7,7 +7,7 @@ import F65Kit
     init(model:AppModel) {
         self.model=model
         let window=NSWindow(contentRect:NSRect(x:0,y:0,width:1180,height:820),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
-        window.title="F65";window.minSize=NSSize(width:1000,height:680);window.isReleasedWhenClosed=false
+        window.title="F65";window.appearance=NSAppearance(named:.darkAqua);window.backgroundColor=Theme.nsBackground;window.titlebarAppearsTransparent=true;window.minSize=NSSize(width:1000,height:680);window.isReleasedWhenClosed=false
         super.init(window:window);window.delegate=self;window.contentView=NSHostingView(rootView:MainView(model:model).defaultAppStorage(model.preferences));window.center();window.setFrameAutosaveName("F65Main")
     }
     required init?(coder:NSCoder){fatalError("init(coder:) has not been implemented")}
@@ -25,8 +25,8 @@ struct WakePrompt:View {
     var body:some View {
         Label(waiting.map{"Press any key on the F65 to wake it. \($0) applies as soon as it answers."} ?? "Press any key on the F65 to wake it. You can keep choosing looks; they apply when it answers.",systemImage:"keyboard.badge.ellipsis")
             .padding(14).frame(maxWidth:.infinity,alignment:.leading)
-            .background(Color.accentColor.opacity(0.08),in:RoundedRectangle(cornerRadius:10))
-            .overlay(RoundedRectangle(cornerRadius:10).strokeBorder(Color.accentColor.opacity(reduced ? 0.5:(pulse ? 0.85:0.15)),lineWidth:2))
+            .background(Theme.accent.opacity(0.08),in:RoundedRectangle(cornerRadius:10))
+            .overlay(RoundedRectangle(cornerRadius:10).strokeBorder(Theme.accent.opacity(reduced ? 0.5:(pulse ? 0.85:0.15)),lineWidth:2))
             .onAppear{guard !reduced else{return};withAnimation(.easeInOut(duration:1.2).repeatForever(autoreverses:true)){pulse=true}}
             .accessibilityAddTraits(.updatesFrequently)
     }
@@ -52,10 +52,10 @@ struct MainView:View {
             HStack(spacing:0) {
                 VStack(alignment:.leading,spacing:5) {
                     ForEach(sections,id:\.0) {section,icon in
-                        Button {model.section=section;model.hover=nil;model.previewLook=nil} label:{Label(section,systemImage:icon).frame(maxWidth:.infinity,alignment:.leading).padding(10).background(model.section==section ? Color.accentColor.opacity(0.13):.clear,in:RoundedRectangle(cornerRadius:7))}.buttonStyle(.plain)
+                        Button {model.section=section;model.hover=nil;model.previewLook=nil} label:{Label(section,systemImage:icon).frame(maxWidth:.infinity,alignment:.leading).padding(10).background(model.section==section ? Theme.accent.opacity(0.13):.clear,in:RoundedRectangle(cornerRadius:7))}.buttonStyle(.plain)
                     }
                     Spacer();Text("Looks marked On keyboard keep working with this app closed.").font(.caption).foregroundStyle(.secondary)
-                }.padding(16).frame(width:180).background(.quaternary.opacity(0.35))
+                }.padding(16).frame(width:180).background(Theme.sidebar)
                 Divider()
                 ZStack(alignment:.bottom) {
                     ScrollView {
@@ -75,7 +75,7 @@ struct MainView:View {
             Divider()
             VStack(alignment:.leading,spacing:6) {
                 if model.device.total>0 {
-                    HStack(spacing:2){ForEach(0..<model.device.total,id:\.self){i in RoundedRectangle(cornerRadius:2).fill(i<model.device.progress ? (model.device.resend ? Color.orange:Color.accentColor):Color.secondary.opacity(0.2)).frame(height:4)}}
+                    HStack(spacing:2){ForEach(0..<model.device.total,id:\.self){i in RoundedRectangle(cornerRadius:2).fill(i<model.device.progress ? (model.device.resend ? Color.orange:Theme.accent):Color.secondary.opacity(0.2)).frame(height:4)}}
                         .animation(reduced ? nil:.easeOut(duration:0.12),value:model.device.progress)
                         .accessibilityLabel("\(model.device.progress) of \(model.device.total) packets acknowledged")
                 }
@@ -86,6 +86,7 @@ struct MainView:View {
             }.padding(12)
         }
         .frame(minWidth:1000,minHeight:680)
+        .background(Theme.bg).tint(Theme.accent).preferredColorScheme(.dark)
         .background(Button(""){model.undo()}.keyboardShortcut("z",modifiers:.command).opacity(0).frame(width:0,height:0).accessibilityHidden(true))
         .sheet(isPresented:$model.commandBar){CommandBar(model:model)}
         .sheet(isPresented:$model.speedCheck){SpeedCheck(model:model)}

@@ -29,10 +29,10 @@ struct CommandBar:View {
                     ForEach(Array(list.enumerated()),id:\.offset) {i,s in
                         Button {run(i)} label:{
                             HStack(spacing:10) {
-                                Image(systemName:s.symbol).frame(width:24,height:24).background(Color.primary.opacity(0.07),in:RoundedRectangle(cornerRadius:6)).foregroundStyle(Color.accentColor)
+                                Image(systemName:s.symbol).frame(width:24,height:24).background(Color.primary.opacity(0.07),in:RoundedRectangle(cornerRadius:6)).foregroundStyle(Theme.accent)
                                 VStack(alignment:.leading,spacing:1){Text(s.title);Text(s.detail).font(.caption).foregroundStyle(.secondary)}
                                 Spacer();if i==selected {Text("↵").foregroundStyle(.secondary)}
-                            }.padding(8).frame(maxWidth:.infinity,alignment:.leading).background(i==selected ? Color.accentColor.opacity(0.15):.clear,in:RoundedRectangle(cornerRadius:8)).contentShape(Rectangle())
+                            }.padding(8).frame(maxWidth:.infinity,alignment:.leading).background(i==selected ? Theme.accent.opacity(0.15):.clear,in:RoundedRectangle(cornerRadius:8)).contentShape(Rectangle())
                         }.buttonStyle(.plain)
                     }
                 }.padding(6)
@@ -95,8 +95,8 @@ struct SpeedCheck:View {
             Text("Which one is faster on your keyboard?").font(.title2.weight(.semibold))
             Text("Speed is stored as 0–4, but which end is faster isn't confirmed. Show A and B on your F65 and watch the keyboard, not this screen. Each is one lighting save; your own settings are put back when you finish.").foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
             HStack(spacing:12) {
-                Button {show(1)} label:{Label("Show A · speed 1",systemImage:showing==1 ? "eye.fill":"eye")}.buttonStyle(.bordered).tint(showing==1 ? .accentColor:nil)
-                Button {show(3)} label:{Label("Show B · speed 3",systemImage:showing==3 ? "eye.fill":"eye")}.buttonStyle(.bordered).tint(showing==3 ? .accentColor:nil)
+                Button {show(1)} label:{Label("Show A · speed 1",systemImage:showing==1 ? "eye.fill":"eye")}.buttonStyle(.bordered).tint(showing==1 ? Theme.accent:nil)
+                Button {show(3)} label:{Label("Show B · speed 3",systemImage:showing==3 ? "eye.fill":"eye")}.buttonStyle(.bordered).tint(showing==3 ? Theme.accent:nil)
                 Text("using \(LightingBlock.names[effect-1])").font(.caption).foregroundStyle(.secondary)
             }.disabled(!model.canWrite)
             Divider()
