@@ -12,7 +12,11 @@ import F65Kit
     @Published var hover:Int?
     @Published var selected:String?="esc"
     @Published var layer=0
-    @Published var frame:[RGB]?
+    /// Latest live frame. Deliberately not @Published: it changes 20 times a second and only the keyboard
+    /// preview draws it, so it goes straight to that view instead of re-rendering the whole window.
+    var frame:[RGB]? {didSet {liveFrameTarget?.liveFrame(frame);if (frame != nil) != showingLiveFrame {showingLiveFrame = frame != nil}}}
+    @Published var showingLiveFrame=false
+    weak var liveFrameTarget:KeyboardView.Coordinator?
     @Published var points:[URL]=[]
     @Published var initial:Snapshot?
     @Published var verifiedKey:String?
@@ -22,7 +26,7 @@ import F65Kit
     var onLogin:(()->Void)?
     var onEditLayout:(()->Void)?
     var onReloadLayout:(()->Void)?
-    var busy:Bool {pending || device.busy}
+    var busy:Bool {pending || device.busy || lightingDue}
     // Controls stay enabled while a save runs; further clicks are queued instead of greying the window.
     var canWrite:Bool {device.online && device.snapshot != nil}
     /// Lighting shown in the UI: the user's latest choice right away, before the keyboard confirms it.
@@ -48,13 +52,25 @@ import F65Kit
             default: break
             }
         }
-        if pending {
-            // Several quick lighting clicks collapse into one save of the latest value.
-            if Self.isLighting(action),let desired=optimistic {queue.removeAll{Self.isLighting($0.0)};queue.append((.lightingBlock(desired),key))}
-            else {queue.append((action,key))}
+        // The keyboard turns all its lights off for a moment whenever it stores lighting settings, so a burst of
+        // lighting clicks (browsing side-light colours, say) is saved once, shortly after the last click.
+        if Self.isLighting(action),optimistic != nil {
+            lightingTimer?.invalidate();lightingDue=true
+            let t=Timer(timeInterval:Self.lightingSettle,repeats:false){[weak self] _ in MainActor.assumeIsolated {self?.commitLighting(key)}}
+            RunLoop.main.add(t,forMode:.common);lightingTimer=t   // .common: fires during menu tracking too
             return
         }
+        if pending {queue.append((action,key));return}
         run(action,key:key)
+    }
+    static let lightingSettle:TimeInterval=0.4
+    private var lightingTimer:Timer?
+    @Published private(set) var lightingDue=false
+    private func commitLighting(_ key:String?) {
+        lightingTimer=nil;lightingDue=false
+        guard let desired=optimistic else{return}
+        let action=DeviceEdit.lightingBlock(desired)
+        if pending {queue.removeAll{Self.isLighting($0.0)};queue.append((action,key))} else {run(action,key:key)}
     }
     private static func isLighting(_ e:DeviceEdit)->Bool {switch e {case .effect,.lighting,.lightingBlock:return true;default:return false}}
     private func run(_ action:DeviceEdit,key:String?) {
@@ -63,10 +79,23 @@ import F65Kit
             guard let self else{return};self.refreshPoints()
             if case .success=result {self.verifiedKey=key}
             if !self.queue.isEmpty {let next=self.queue.removeFirst();self.run(next.0,key:next.1);return}
-            self.pending=false;self.optimistic=nil
+            // Keep showing the user's choice while another lighting save is still waiting to go out.
+            self.pending=false;if !self.lightingDue {self.optimistic=nil}
         }}
     }
     func updateLive(_ change:(inout F65Kit.Settings)->Void) {var value=live;change(&value);live=value;onLive?(value)}
+
+    // MARK: Per-key live colours
+    /// Keys picked on the Live lighting page (PhysicalKey ids).
+    @Published var liveSelection:Set<String>=[]
+    func toggleLiveSelection(_ id:String) {if liveSelection.contains(id) {liveSelection.remove(id)} else {liveSelection.insert(id)}}
+    /// Colour the selected keys. If live lighting is off, start it on a dark background so they show.
+    func applyKeyColour(_ c:RGB) {
+        guard !liveSelection.isEmpty else{return}
+        updateLive{s in for id in liveSelection {s.keyColors[id]=c};if s.mode == .off {s.mode = .dark};s.paused=false}
+    }
+    func removeKeyColours(_ ids:Set<String>) {updateLive{s in for id in ids {s.keyColors[id]=nil}}}
+    func clearKeyColours() {updateLive{$0.keyColors=[:]}}
     func refreshPoints() {points=service.backups.list()}
     func restore(_ url:URL) {
         do {
