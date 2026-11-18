@@ -53,31 +53,49 @@ public enum ReceiverProtocol {
     /// Colour-group stream `R G B count led1 led2 …`, at most `maxBytes`. Black LEDs are left out
     /// (unlisted LEDs go dark). Exact colours first (a wave has ≤ 16, one per column, so it fits);
     /// then coarser quantisation, then the smallest groups get merged into the nearest colour.
-    public static func stream(_ colors: [RGB], slots: [Int]) -> [UInt8] {
-        var groups: [(color: RGB, leds: [Int])] = []
-        for levels in [0, 4, 3, 2] {   // 0 = exact colours
-            var index: [RGB: Int] = [:]
-            groups = []
-            for s in slots where s < colors.count && !colors[s].isBlack {
-                let q = levels == 0 ? colors[s] : quantise(colors[s], levels: levels)
-                if let i = index[q] { groups[i].leds.append(s) } else { index[q] = groups.count; groups.append((q, [s])) }
-            }
-            if size(groups) <= maxBytes { break }
-        }
-        while size(groups) > maxBytes && groups.count > 1 {
-            groups.sort(by: stableOrder)
-            let small = groups.removeLast()
-            let j = groups.indices.min { groups[$0].color.distance(to: small.color) < groups[$1].color.distance(to: small.color) }!
-            groups[j].leds += small.leds
-        }
-        if groups.count == 1 && size(groups) > maxBytes {
-            groups[0].leds = Array(groups[0].leds.prefix(maxBytes - 4))   // can't happen with the F65's 68 keys
-        }
+    /// `pinned` slots (per-key colours the user picked) keep their exact colour and are never merged;
+    /// only the background gives way when a frame is too big.
+    public static func stream(_ colors: [RGB], slots: [Int], pinned: Set<Int> = []) -> [UInt8] {
+        let lit = slots.filter { $0 < colors.count && !colors[$0].isBlack }
+        let fixed = lit.filter { pinned.contains($0) }
+        let rest = lit.filter { !pinned.contains($0) }
+        var pinnedGroups = group(fixed, colors, levels: 0)
+        if size(pinnedGroups) > maxBytes { pinnedGroups = fit(fixed, colors, budget: maxBytes) }   // > ~30 distinct key colours
+        let restGroups = fit(rest, colors, budget: maxBytes - size(pinnedGroups))
+        var groups = pinnedGroups + restGroups
         if groups.isEmpty {
             return [0, 0, 0, 1, UInt8(slots.first ?? 1)]   // explicit "all dark"
         }
         groups.sort(by: stableOrder)
         return groups.flatMap { [$0.color.r, $0.color.g, $0.color.b, UInt8($0.leds.count)] + $0.leds.map { UInt8($0) } }
+    }
+
+    private static func group(_ slots: [Int], _ colors: [RGB], levels: Int) -> [(color: RGB, leds: [Int])] {
+        var index: [RGB: Int] = [:]
+        var groups: [(color: RGB, leds: [Int])] = []
+        for s in slots {
+            let q = levels == 0 ? colors[s] : quantise(colors[s], levels: levels)
+            if let i = index[q] { groups[i].leds.append(s) } else { index[q] = groups.count; groups.append((q, [s])) }
+        }
+        return groups
+    }
+
+    /// Group `slots` within `budget` bytes: exact, then 4/3/2 levels per channel, then merge the smallest groups.
+    private static func fit(_ slots: [Int], _ colors: [RGB], budget: Int) -> [(color: RGB, leds: [Int])] {
+        guard budget > 4, !slots.isEmpty else { return [] }
+        var groups: [(color: RGB, leds: [Int])] = []
+        for levels in [0, 4, 3, 2] {   // 0 = exact colours
+            groups = group(slots, colors, levels: levels)
+            if size(groups) <= budget { return groups }
+        }
+        while size(groups) > budget && groups.count > 1 {
+            groups.sort(by: stableOrder)
+            let small = groups.removeLast()
+            let j = groups.indices.min { groups[$0].color.distance(to: small.color) < groups[$1].color.distance(to: small.color) }!
+            groups[j].leds += small.leds
+        }
+        if size(groups) > budget { groups[0].leds = Array(groups[0].leds.prefix(budget - 4)) }   // can't happen with 68 keys
+        return groups
     }
 
     /// Bigger groups first; ties broken by colour so the order never changes between frames
@@ -90,8 +108,8 @@ public enum ReceiverProtocol {
     private static func size(_ g: [(color: RGB, leds: [Int])]) -> Int { g.reduce(0) { $0 + 4 + $1.leds.count } }
 
     /// Split the stream into 20-byte output reports: `13 88 total seq 0x10+n data… checksum`.
-    public static func reports(_ colors: [RGB], slots: [Int]) -> [[UInt8]] {
-        let data = stream(colors, slots: slots)
+    public static func reports(_ colors: [RGB], slots: [Int], pinned: Set<Int> = []) -> [[UInt8]] {
+        let data = stream(colors, slots: slots, pinned: pinned)
         let chunks = stride(from: 0, to: data.count, by: bytesPerReport).map {
             Array(data[$0..<min($0 + bytesPerReport, data.count)])
         }
