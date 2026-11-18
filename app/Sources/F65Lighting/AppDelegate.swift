@@ -4,6 +4,7 @@ import F65Kit
 import AppKit
 import SwiftUI
 import ServiceManagement
+import Carbon.HIToolbox
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -26,6 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let pauseItem = NSMenuItem(title: "Pause", action: #selector(togglePause), keyEquivalent: "p")
     private let loginItem = NSMenuItem(title: "Start at Login", action: #selector(toggleLogin), keyEquivalent: "")
     private var layoutWatch: Timer?
+    private let favouritesHeader = NSMenuItem(title: "Favourite looks", action: nil, keyEquivalent: "")
+    private var favouriteItems: [NSMenuItem] = []
+    private var hotKey: EventHotKeyRef?
     private var layoutMTime: Date?
 
     // MARK: Lifecycle
@@ -55,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         model.onEditLayout = { [weak self] in self?.editLayout() }
         model.onReloadLayout = { [weak self] in self?.reloadLayout() }
         buildMenu()
+        registerHotKey()
 
         engine.onStatus = { [weak self] s in
             MainActor.assumeIsolated { self?.statusChanged(s) }
@@ -149,6 +154,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let open = NSMenuItem(title: "Open F65…", action: #selector(openMainWindow), keyEquivalent: "o")
         open.target = self
         menu.addItem(open)
+        let command = NSMenuItem(title: "Command…", action: #selector(openCommandBar), keyEquivalent: "k")
+        command.target = self
+        menu.addItem(command)
+        menu.addItem(.separator())
+        favouritesHeader.isEnabled = false
+        menu.addItem(favouritesHeader)
+        let next = NSMenuItem(title: "Next Favourite", action: #selector(nextFavourite), keyEquivalent: "l")
+        next.keyEquivalentModifierMask = [.control, .option, .command]
+        next.target = self
+        menu.addItem(next)
         menu.addItem(.separator())
         menu.addItem(statusLine)
         menu.addItem(hintLine)
@@ -163,6 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             modeItems[m] = it
         }
         modeMenuItem.submenu = modeMenu
+        menu.addItem(NSMenuItem(title: "Live lighting", action: nil, keyEquivalent: ""))
+        menu.items.last?.isEnabled = false
         menu.addItem(modeMenuItem)
 
         let colourItem = NSMenuItem(title: "Choose Colour…", action: #selector(showColourPanel), keyEquivalent: "")
@@ -218,7 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
     }
 
-    func menuNeedsUpdate(_ menu: NSMenu) { refreshMenu() }
+    func menuNeedsUpdate(_ menu: NSMenu) { refreshFavourites(); refreshMenu() }
 
     private func refreshMenu() {
         guard statusItem != nil else { return }
@@ -272,6 +289,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         statusItem.button?.appearsDisabled = !status.streaming
+    }
+
+    /// Favourite looks with a small preview, inserted under the "Favourite looks" header.
+    private func refreshFavourites() {
+        favouriteItems.forEach { menu.removeItem($0) }
+        favouriteItems = []
+        let favs = model.lookList.filter(\.favourite)
+        favouritesHeader.title = favs.isEmpty ? "Favourite looks: star one in the window" : "Favourite looks"
+        guard var index = menu.items.firstIndex(of: favouritesHeader) else { return }
+        let current = model.currentLook?.id
+        for l in favs {
+            index += 1
+            let it = NSMenuItem(title: l.name + (l.kind == .app ? "  (needs app)" : ""), action: #selector(pickLook(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = l.id
+            it.state = l.id == current ? .on : .off
+            it.image = Self.thumbnail(l, palette: model.palette)
+            menu.insertItem(it, at: index)
+            favouriteItems.append(it)
+        }
+    }
+
+    static func thumbnail(_ look: Look, palette: [RGB]) -> NSImage? {
+        let view = Canvas { g, size in Board.draw(g, size, frame: look.previewFrame(time: 4.2, palette: palette), style: BoardStyle(pad: 0.15)) }
+            .frame(width: 54, height: 20).background(Color.black).clipShape(RoundedRectangle(cornerRadius: 3))
+        let r = ImageRenderer(content: view)
+        r.scale = NSScreen.main?.backingScaleFactor ?? 2
+        return r.nsImage
+    }
+
+    @objc private func pickLook(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String, let l = model.looks.look(id) else { return }
+        model.apply(l)
+    }
+    @objc private func nextFavourite() { model.applyNextFavourite() }
+    @objc private func openCommandBar() { openMainWindow(); model.commandBar = true }
+
+    /// ⌃⌥⌘L anywhere: next favourite look.
+    private func registerHotKey() {
+        var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(GetApplicationEventTarget(), { _, _, ctx in
+            guard let ctx else { return noErr }
+            let me = Unmanaged<AppDelegate>.fromOpaque(ctx).takeUnretainedValue()
+            MainActor.assumeIsolated { me.model.applyNextFavourite() }
+            return noErr
+        }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), nil)
+        RegisterEventHotKey(UInt32(kVK_ANSI_L), UInt32(cmdKey | optionKey | controlKey), EventHotKeyID(signature: OSType(0x4636354C), id: 1), GetApplicationEventTarget(), 0, &hotKey)
     }
 
     private func statusChanged(_ s: EngineStatus) {

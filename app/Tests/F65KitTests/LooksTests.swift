@@ -122,3 +122,24 @@ final class LooksTests: XCTestCase {
         XCTAssertEqual(KeyGeometry.keys.first { $0.id == "left" }?.x, 13.0)
     }
 }
+
+final class PaintTests: XCTestCase {
+    func testFloodFillStopsAtDifferentColours() {
+        let red = RGB(r: 255, g: 0, b: 0), blue = RGB(r: 0, g: 0, b: 255)
+        // Paint the whole top row red; flood from Q (unpainted) must not cross into it.
+        var colours: [String: RGB] = [:]
+        for id in PhysicalKey.rows[0] { colours[id] = red }
+        let filled = Paint.flood(from: "q", colours: colours, fill: blue)
+        XCTAssertEqual(filled["q"], blue); XCTAssertEqual(filled["space"], blue); XCTAssertEqual(filled["right"], blue)
+        XCTAssertTrue(PhysicalKey.rows[0].allSatisfy { filled[$0] == red })
+        // Flood on the red row repaints only the row.
+        let row = Paint.flood(from: "esc", colours: colours, fill: blue)
+        XCTAssertTrue(PhysicalKey.rows[0].allSatisfy { row[$0] == blue }); XCTAssertNil(row["q"])
+    }
+    func testGradientRunsEndToEnd() {
+        let g = Paint.gradient(from: "esc", to: "del", ids: PhysicalKey.rows[0], RGB(r: 0, g: 0, b: 0), RGB(r: 200, g: 100, b: 0))
+        XCTAssertEqual(g["esc"], RGB(r: 0, g: 0, b: 0)); XCTAssertEqual(g["del"], RGB(r: 200, g: 100, b: 0))
+        XCTAssertEqual(g.count, PhysicalKey.rows[0].count)
+        XCTAssertGreaterThan(g["d8"]!.r, g["d2"]!.r)
+    }
+}

@@ -27,12 +27,12 @@ import F65Kit
             try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
             model.updateLive{$0.mode = .off};try await ready(model)
             pass("Mock snapshot loads without opening HID devices")
-            for section in ["Lighting","Keys","Live lighting","Macros","Restore points","Settings"] {
+            for section in ["Looks","Studio","Keys","History","Settings"] {
                 model.section=section;await pause(0.4)
                 guard let content=window.window?.contentView else{throw Failure(message:"Missing content view")}
                 content.layoutSubtreeIfNeeded()
                 if let rep=content.bitmapImageRepForCachingDisplay(in:content.bounds){content.cacheDisplay(in:content.bounds,to:rep);if let png=rep.representation(using:.png,properties:[:]){try png.write(to:dir.appendingPathComponent(section.replacingOccurrences(of:" ",with:"-")+".png"))}}
-                if ["Lighting","Keys","Live lighting","Settings"].contains(section){_ = try await loadedWeb(window)}
+                if ["Looks","Studio","Keys","Settings"].contains(section){_ = try await loadedWeb(window)}
                 pass("Native screen renders: "+section)
             }
             var w=try await loadedWeb(window)
@@ -70,15 +70,37 @@ import F65Kit
                     try require(ok,"Key colours over \(Backgrounds.name(effect))")}
                 model.clearKeyColours();model.liveSelection=[];try require(model.live.keyColors.isEmpty,"Clear key colours")
                 pass("\(pref.title): WASD key colours over Snake and Waterfall, then cleared")
+                // Looks: a keyboard look writes its effect, an app look streams, Undo goes back, commands work.
+                let wf=model.looks.look("waterfall")!;model.apply(wf);await pause(0.6);try await ready(model)
+                try require(wf.matches(model.device.snapshot!.lighting),"Apply keyboard look")
+                model.apply(model.looks.look("wasd")!);await pause(0.6);try await ready(model)
+                try require(model.live.mode == .wave && model.live.keyColors["w"] != nil,"Apply app look")
+                if pref == .receiver {try require(model.device.snapshot!.lighting.effect==1,"2.4G app look sets Fixed")}
+                model.undo();await pause(0.6);try await ready(model)
+                try require(model.live.mode == .off && wf.matches(model.device.snapshot!.lighting),"Undo app look")
+                model.run(.paint(["up"],red));await pause(0.6);try await ready(model)
+                try require(model.live.keyColors["up"]==red && model.currentLookID=="quick","Command paint")
+                model.run(.brightness(50));try require(abs(model.live.brightness-0.5)<0.01,"Command brightness")
+                model.updateLive{$0.mode = .off;$0.brightness=1}
+                pass("\(pref.title): keyboard look, app look\(pref == .receiver ? " (sets Fixed)":""), Undo and ⌘K paint/brightness")
+                model.updateLive{$0.mode = .wave;$0.paused=false}
                 model.updateLive{$0.paused=true};await pause(0.2);try require(model.frame==nil,"Pause stream")
                 model.updateLive{$0.mode = .off;$0.paused=false};pass("\(pref.title): Solid, Wave, Custom, Pause and Off")
             }
-            model.section="Live lighting";await pause(0.3);w=try await loadedWeb(window)
-            model.liveSelection=["w","a"];await pause(0.4)
-            let sel=try await w.evaluateJavaScript("window.f65.inspect()") as! [String:Any]
-            try require(Set((sel["selection"] as? [String]) ?? [])==["w","a"],"Live multi-select bridge")
-            model.liveSelection=[];pass("Live lighting: multi-key selection reaches the keyboard view")
-            model.section="Lighting";await pause(0.3);w=try await loadedWeb(window)
+            model.updateLive{$0.pref = .cable;$0.mode = .off};await pause(0.1);try await ready(model)
+            let sunset=model.looks.look("sunset")!;model.tryOn=true;model.previewLook=sunset;var streamed=false
+            for _ in 0..<30 {await pause(0.1);if let f=model.frame,f[PhysicalKey.slots["q"]!]==sunset.keyColors["q"] {streamed=true;break}}
+            try require(streamed,"Try on streams the hovered look")
+            model.previewLook=nil;model.tryOn=false;var stopped=false
+            for _ in 0..<30 {await pause(0.1);if model.frame==nil {stopped=true;break}}
+            try require(stopped && !model.liveActive,"Try on stops without changing live settings")
+            pass("Try on keyboard: the hovered look streams to the keyboard, then stops")
+            model.draft.keyColors=["w":RGB(r:255,g:0,b:0)];model.section="Studio";await pause(0.4);w=try await loadedWeb(window)
+            try require(model.previewLook?.keyColors["w"] != nil,"Studio previews its draft")
+            let saved=model.looks.add(model.draft);model.reloadLooks();try require(model.lookList.contains{$0.id==saved.id},"Studio saves a look")
+            model.deleteLook(saved.id);model.section="History";await pause(0.4);try require(model.previewLook==nil,"Leaving Studio ends its preview")
+            pass("Studio: draft preview, save and delete; History renders")
+            model.section="Looks";await pause(0.3);w=try await loadedWeb(window)
             try await w.evaluateJavaScript("window.f65.setState({reduceMotion:true});window.f65.setActive(false)")
             let state=try await w.evaluateJavaScript("window.f65.inspect()") as! [String:Any];try require(state["active"] as? Bool==false,"Inactive renderer")
             pass("Reduce Motion / inactive rendering bridge")

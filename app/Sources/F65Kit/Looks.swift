@@ -342,3 +342,39 @@ public extension BackupStore {
         return try? LightingBlock(r.bytes)
     }
 }
+
+// MARK: - Studio paint operations
+
+public enum Paint {
+    /// Keys that touch: side by side on a row, or overlapping columns on adjacent rows.
+    static func touching(_ a: KeyPosition, _ b: KeyPosition) -> Bool {
+        if a.cy == b.cy { return abs(a.cx - b.cx) <= (a.width + b.width) / 2 + 0.05 }
+        return abs(a.cy - b.cy) == 1 && a.x < b.x + b.width - 0.1 && b.x < a.x + a.width - 0.1
+    }
+    /// Paint bucket: every key connected to `id` that has the same colour (or is unpainted, like `id`).
+    public static func flood(from id: String, colours: [String: RGB], fill: RGB) -> [String: RGB] {
+        guard let start = KeyGeometry.keys.first(where: { $0.id == id }) else { return colours }
+        let want = colours[id]
+        var out = colours, seen: Set<String> = [id], queue = [start]
+        while !queue.isEmpty {
+            let k = queue.removeFirst()
+            out[k.id] = fill
+            for n in KeyGeometry.keys where !seen.contains(n.id) && touching(k, n) && colours[n.id] == want {
+                seen.insert(n.id); queue.append(n)
+            }
+        }
+        return out
+    }
+    /// Colours for `ids` along the line from key `from` to key `to`, blending `a` → `b`.
+    public static func gradient(from: String, to: String, ids: [String], _ a: RGB, _ b: RGB) -> [String: RGB] {
+        guard let p = KeyGeometry.keys.first(where: { $0.id == from }), let q = KeyGeometry.keys.first(where: { $0.id == to }) else { return [:] }
+        let dx = q.cx - p.cx, dy = q.cy - p.cy, len2 = max(dx * dx + dy * dy, 0.0001)
+        var out: [String: RGB] = [:]
+        for k in KeyGeometry.keys where ids.contains(k.id) {
+            let t = min(1, max(0, ((k.cx - p.cx) * dx + (k.cy - p.cy) * dy) / len2))
+            func mix(_ x: UInt8, _ y: UInt8) -> UInt8 { UInt8((Double(x) + (Double(y) - Double(x)) * t).rounded()) }
+            out[k.id] = RGB(r: mix(a.r, b.r), g: mix(a.g, b.g), b: mix(a.b, b.b))
+        }
+        return out
+    }
+}

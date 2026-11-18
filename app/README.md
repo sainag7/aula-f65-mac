@@ -38,14 +38,29 @@ F65_MOCK=1 F65_SMOKE=1 "app/F65 Lighting.app/Contents/MacOS/F65Lighting"   # scr
 Open it from the menu-bar icon → **Open F65…** (⌘O). The Dock icon shows only while the window is
 open. A launch at login stays menu-bar only.
 
+Everything the keyboard can show is a **Look**. A look is either **On keyboard** (an onboard effect
+with its brightness, speed and colour, saved in the lighting block and working with the app closed)
+or **Needs app** (a background plus painted keys, streamed by the app; nothing is saved). The badge on
+every look says which.
+
 | Section | What it does |
 |---|---|
-| Lighting | Keyboard view, effect grid (hover previews in the app only, click saves), brightness / speed / colour for the current effect, palette editor with Reset to factory |
-| Live lighting | Off / Solid / Rainbow wave / Custom layout, brightness %, pause, connection preference |
-| Keys | Base / Fn layer, click a key (or pick it from the list) to see its binding and remap, disable or restore it. Fn and connection bindings ask for confirmation first |
-| Macros | Read-only. Shows whether macro memory is empty |
-| Restore points | Every save makes one first. Back up now, Import… (the CLI's `backups/*.txt` work), Reveal, Restore… |
-| Settings | Keyboard view: 3D model or Flat (Flat lay / Glass / Outline), camera, colourway. Start at login |
+| Looks | Gallery of looks with live thumbnails. Hover to preview on the keyboard view, click to apply, **Undo** (⌘Z) in the toast. Star looks to make them favourites. Quick-tune bar for the current look: brightness (the keyboard's 5 steps, or 0–100 % for app looks), speed, colour and edge glow (side lights). **Try on keyboard** streams the hovered look before you apply it (cable, or 2.4G while the saved effect is Fixed). All 18 onboard effects are listed below the gallery |
+| Studio | Paint keys: brush, fill, select, eyedropper, gradient, eraser, region buttons (All, Letters, Numbers, Modifiers, Arrows, WASD, Home row, Space bar). A background layer (dark, solid, rainbow wave or one of 13 effects) sits under the paint. Shows the 2.4G frame budget (168 bytes; painted keys stay exact). Save look adds it to the gallery |
+| Keys | Click a key, then search for what it should send (“mute”, “⌘”, “F5”, “disable”) or press a key to copy it. Base / Fn layer. Changed base keys are listed with one-click Reset. Fn and connection bindings ask for confirmation first |
+| History | Restore points as a timeline drawn from each point's lighting. Go back writes only the blocks that differ. Restore point files… has Back up now, Import…, Reveal and full Restore… |
+| Settings | Keyboard view (3D or Flat, camera, colourway), start at login, connection, pause app looks, speed-direction check, layout file, macros (read only) |
+
+**⌘K** opens a command bar: “wasd red”, “esc enter cyan”, “dim 50”, “off”, “storm”, “undo”. A
+colour that isn't one of the keyboard's 7 opens the colour chooser, which offers to replace the least
+used keyboard colour (and says which effects also use it), use the nearest one, or make a Needs app look.
+
+Over 2.4G the F65 only shows app-drawn lighting while its saved effect is Fixed. Applying a Needs app
+look over 2.4G asks once whether to set Fixed (one lighting save). If the keyboard is asleep, a chosen
+look waits and applies when it wakes.
+
+Speed direction is unconfirmed until you check it once (Settings or the quick-tune bar): the app shows
+speed 1 and 3 on your keyboard, you say which was faster, and your own setting is put back.
 
 Unconfirmed values are labelled in the UI: speed direction (0–4) and the battery estimate from `4A`.
 Effect previews are approximations drawn in the app.
@@ -57,6 +72,8 @@ nothing is being streamed.
 
 | Menu item | What it does |
 |---|---|
+| Favourite looks | Your starred looks with a small preview; click one to apply it. **Next Favourite** (⌃⌥⌘L, works anywhere) cycles them |
+| Command… | Opens the window with the ⌘K command bar |
 | Status line | `Cable — streaming`, `2.4G receiver — streaming`, `Not connected`, … |
 | Mode | **Off** (stop streaming), **Solid colour**, **Rainbow wave**, **Custom layout** |
 | Choose Colour… | Opens the colour panel; picking a colour switches to Solid colour |
@@ -149,7 +166,8 @@ at a time; a second copy quits immediately.
 | `Sources/F65Kit/MockTransport.swift` | In-memory keyboard and packet-level fault injection for tests and `F65_MOCK=1` |
 | `Sources/F65Kit/Protocol.swift`, `Engine.swift`, `KeyMap.swift`, `Layout.swift`, `Colors.swift`, `KeyNames.swift` | Live-frame encoders and renderer, key map, `layout.json`, colours, key names |
 | `Sources/F65Lighting/AppDelegate.swift` | Menu-bar menu, settings, login item, window opening |
-| `Sources/F65Lighting/MainWindow.swift`, `LightingView.swift`, `KeysView.swift`, `DeviceViews.swift` | Main window and its sections |
+| `Sources/F65Kit/Looks.swift`, `Commands.swift` | Looks, the looks store (`looks.json`), key regions, paint fill/gradient, colour-slot advice, 2.4G budget, ⌘K parser |
+| `Sources/F65Lighting/MainWindow.swift`, `LooksView.swift`, `StudioView.swift`, `KeysView.swift`, `HistoryView.swift`, `CommandBar.swift`, `SettingsView.swift`, `DeviceViews.swift` | Main window and its sections |
 | `Sources/F65Lighting/KeyboardView.swift`, `Resources/keyboard/` | WKWebView keyboard (three.js r147 vendored, offline) and its JS bridge |
 | `Sources/F65Lighting/SmokeTest.swift` | Mock-only scripted check (`F65_SMOKE=1`) |
 | `Tests/F65KitTests/` | Unit tests |
