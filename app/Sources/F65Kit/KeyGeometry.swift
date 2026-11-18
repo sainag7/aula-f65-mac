@@ -12,6 +12,10 @@ public struct KeyPosition: Equatable {
     public let slot: Int        // LED slot
     public let cx: Double
     public let cy: Double
+    /// Key width in key units (1 = a letter key).
+    public let width: Double
+    /// Left edge in key units.
+    public var x: Double { cx - width / 2 }
 }
 
 public enum KeyGeometry {
@@ -30,7 +34,7 @@ public enum KeyGeometry {
             for id in row {
                 x += gapBefore[id] ?? 0
                 let w = widths[id] ?? 1
-                out.append(KeyPosition(id: id, index: index, slot: PhysicalKey.slots[id]!, cx: x + w / 2, cy: Double(y) + 0.5))
+                out.append(KeyPosition(id: id, index: index, slot: PhysicalKey.slots[id]!, cx: x + w / 2, cy: Double(y) + 0.5, width: w))
                 x += w
                 index += 1
             }
