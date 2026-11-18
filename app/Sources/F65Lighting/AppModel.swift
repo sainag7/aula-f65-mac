@@ -23,7 +23,12 @@ import F65Kit
     var onEditLayout:(()->Void)?
     var onReloadLayout:(()->Void)?
     var busy:Bool {pending || device.busy}
-    var canWrite:Bool {device.online && device.snapshot != nil && !busy}
+    // Controls stay enabled while a save runs; further clicks are queued instead of greying the window.
+    var canWrite:Bool {device.online && device.snapshot != nil}
+    /// Lighting shown in the UI: the user's latest choice right away, before the keyboard confirms it.
+    @Published var optimistic:LightingBlock?
+    var lighting:LightingBlock? {optimistic ?? device.snapshot?.lighting}
+    private var queue:[(DeviceEdit,String?)]=[]
     init(service:DeviceService) {
         self.service=service
         service.onState={[weak self] state in MainActor.assumeIsolated {
@@ -34,10 +39,31 @@ import F65Kit
         refreshPoints()
     }
     func edit(_ action:DeviceEdit, key:String?=nil) {
-        guard !busy else{return};pending=true;hover=nil
+        hover=nil
+        // Show lighting changes immediately; the keyboard catches up in the background.
+        if var led=lighting {
+            switch action {
+            case .effect(let e): if (try? led.setEffect(e)) != nil {optimistic=led}
+            case .lighting(let f,let v): if (try? led.set(f,value:v)) != nil {optimistic=led}
+            default: break
+            }
+        }
+        if pending {
+            // Several quick lighting clicks collapse into one save of the latest value.
+            if Self.isLighting(action),let desired=optimistic {queue.removeAll{Self.isLighting($0.0)};queue.append((.lightingBlock(desired),key))}
+            else {queue.append((action,key))}
+            return
+        }
+        run(action,key:key)
+    }
+    private static func isLighting(_ e:DeviceEdit)->Bool {switch e {case .effect,.lighting,.lightingBlock:return true;default:return false}}
+    private func run(_ action:DeviceEdit,key:String?) {
+        pending=true
         service.perform(action){[weak self] result in MainActor.assumeIsolated {
-            guard let self else{return};self.pending=false;self.refreshPoints()
+            guard let self else{return};self.refreshPoints()
             if case .success=result {self.verifiedKey=key}
+            if !self.queue.isEmpty {let next=self.queue.removeFirst();self.run(next.0,key:next.1);return}
+            self.pending=false;self.optimistic=nil
         }}
     }
     func updateLive(_ change:(inout F65Kit.Settings)->Void) {var value=live;change(&value);live=value;onLive?(value)}

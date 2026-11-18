@@ -6,6 +6,7 @@ public final class MockTransport: Transport {
     public var corruptWrites=Set<Int>()
     public var writes=0
     public var liveFrames=0
+    public var readLog:[UInt8]=[]
     public var storage: [String:[UInt8]]
     public init(kind: LinkKind = .cable, records: [BackupRecord]? = nil) {
         self.kind=kind
@@ -16,7 +17,7 @@ public final class MockTransport: Transport {
         for r in records ?? [] {storage["\(r.cmd):\(r.sub)"]=r.bytes}
     }
     public func read(_ cmd: UInt8, sub: UInt8 = 0) throws -> [UInt8] {
-        if cmd==7 {return [asleep ? 0 : 1]};if asleep {throw F65Error.asleep}
+        readLog.append(cmd);if cmd==7 {return [asleep ? 0 : 1]};if asleep {throw F65Error.asleep}
         guard let b=storage["\(cmd):\(sub)"] else {throw F65Error.timeout(cmd)};return b
     }
     public func write(_ cmd: UInt8, sub: UInt8 = 0, data: [UInt8], progress: WriteProgress) throws {

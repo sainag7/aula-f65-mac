@@ -17,6 +17,9 @@ public struct DeviceState {
 }
 public enum DeviceEdit {
     case effect(Int), lighting(String,Int), palette([RGB]), paletteReset
+    /// Several queued lighting choices in one save: copies the effect byte and the 18 per-effect
+    /// slots (the only decoded lighting bytes) from `desired` onto a freshly read block.
+    case lightingBlock(LightingBlock)
     case remap(slot:Int,layer:UInt8,entry:KeyEntry,allowProtected:Bool)
     case restore([BackupRecord]), backup, refresh
 }
@@ -31,6 +34,7 @@ public final class DeviceService: @unchecked Sendable {
     private var transport:Transport?
     private var suspended=false
     private var nextPoll=Date.distantPast
+    private var nextLightingRead=Date.distantPast
     private var lastFrame:[RGB]=[]
     private var lastSend=Date.distantPast
     private var nextFrame=Date.distantPast
@@ -61,10 +65,15 @@ public final class DeviceService: @unchecked Sendable {
     }
     // Called only on q. While this synchronous transaction runs the frame timer cannot fire;
     // HID callbacks are on HIDHub.callbacks and feed the independently locked inbox.
-    private func transaction<T>(_ body:(Transport)throws->T) throws -> T {
-        let t=try connect();state.busy=true;publish();deliverFrame(nil)
-        defer {state.busy=false;lastFrame=[];nextFrame=Date();publish()}
-        Thread.sleep(forTimeInterval:0.2);t.drain()
+    // Background transactions (the periodic poll) don't mark the app busy and don't publish unless
+    // something changed, so the window never flickers into a disabled state every few seconds.
+    private func transaction<T>(background:Bool=false,_ body:(Transport)throws->T) throws -> T {
+        let t=try connect()
+        if !background {state.busy=true;publish()}
+        defer {state.busy=false;lastFrame=[];nextFrame=Date();if !background {publish()}}
+        // Live frames disturb replies; only wait for them to settle when frames were just sent.
+        if Date().timeIntervalSince(lastSend)<0.5 {Thread.sleep(forTimeInterval:0.15)}
+        t.drain()
         state.online = try t.read(7,sub:0).first==1
         guard state.online else {state.snapshot=nil;throw F65Error.asleep}
         return try body(t)
@@ -81,7 +90,13 @@ public final class DeviceService: @unchecked Sendable {
                 self.state.progress=0;self.state.total=0;self.state.recovery=nil
                 let result:URL? = try self.transaction {t in
                     if case .refresh=edit {try self.load(t);return nil}
-                    let before=try Snapshot(t);self.state.snapshot=before
+                    // Read fresh only the block being changed (2.4G: ~10 packets for lighting instead of
+                    // ~117 for everything). Restores and explicit backups still read all four blocks.
+                    var before:Snapshot
+                    if let cached=self.state.snapshot,let target=Self.target(edit) {
+                        before=cached;try before.replace(target.cmd,sub:target.sub,bytes:t.read(target.cmd,sub:target.sub))
+                    } else {before=try Snapshot(t)}
+                    self.state.snapshot=before
                     let backup=try self.backups.write(before)
                     if case .backup=edit {return backup}
                     var records:[BackupRecord]=[]
@@ -89,6 +104,10 @@ public final class DeviceService: @unchecked Sendable {
                     switch edit {
                     case .effect(let e): try led.setEffect(e);records=[.init(cmd:0x44,sub:0,bytes:led.bytes)]
                     case .lighting(let field,let value):try led.set(field,value:value);records=[.init(cmd:0x44,sub:0,bytes:led.bytes)]
+                    case .lightingBlock(let desired):
+                        try led.setEffect(desired.effect)
+                        for e in 1...18 {try led.setSlot(e,brightness:desired.brightness(e),speed:desired.speed(e),colour:desired.colour(e))}
+                        records=[.init(cmd:0x44,sub:0,bytes:led.bytes)]
                     case .palette(let colors):guard colors.count==7 else{throw F65Error.invalid("Seven palette colours required.")};for (i,c) in colors.enumerated(){try palette.set(i,c)};records=[.init(cmd:0x49,sub:0,bytes:palette.bytes)]
                     case .paletteReset:palette.reset();records=[.init(cmd:0x49,sub:0,bytes:palette.bytes)]
                     case .remap(let slot,let layer,let entry,let allow):
@@ -114,11 +133,13 @@ public final class DeviceService: @unchecked Sendable {
                     for r in records {guard [UInt8(0x41),0x44,0x49].contains(r.cmd),seen.insert("\(r.cmd):\(r.sub)").inserted else{throw F65Error.invalid("Invalid restore records.")};try Blocks.validate(r.cmd&15,sub:r.sub,r.bytes)}
                     let total=records.reduce(0){$0+(t.kind == .cable ? 1:($1.bytes.count+13)/14)};var completed=0
                     var applied:[BackupRecord]=[]
+                    var after=before
                     do {
                         for r in records {
                             let old=before.records.first{$0.cmd==r.cmd && $0.sub==r.sub}!
                             self.state.message="Saving and verifying…";self.publish()
-                            _ = try safeSave(t,cmd:r.cmd&15,sub:r.sub,new:r.bytes,old:old.bytes,backup:backup){a,_,resend in self.state.progress=completed+a;self.state.total=total;self.state.resend=resend;self.publish()}
+                            let back=try safeSave(t,cmd:r.cmd&15,sub:r.sub,new:r.bytes,old:old.bytes,backup:backup){a,_,resend in self.state.progress=completed+a;self.state.total=total;self.state.resend=resend;self.publish()}
+                            try after.replace(r.cmd,sub:r.sub,bytes:back)
                             applied.append(old);completed += t.kind == .cable ? 1:(r.bytes.count+13)/14
                         }
                     } catch {
@@ -134,7 +155,12 @@ public final class DeviceService: @unchecked Sendable {
                         if !applied.isEmpty {throw F65Error.verifyFailed(rolledBack:allRolledBack,backup:backup)}
                         throw error
                     }
-                    try self.load(t);return backup
+                    // The verified read-back is the new state; no full re-read needed except after a restore.
+                    if case .restore=edit {try self.load(t)} else {
+                        self.state.snapshot=after
+                        if after.base != before.base {KeyMap(bytes:after.base.bytes)?.saveToCache()}
+                    }
+                    return backup
                 }
                 self.state.message = self.isMock ? "Verified against mock keyboard" : "Loaded from keyboard · saved and verified"
                 if case .backup=edit {self.state.message="Restore point saved"}
@@ -143,6 +169,15 @@ public final class DeviceService: @unchecked Sendable {
             } catch {
                 self.handle(error);DispatchQueue.main.async {completion?(.failure(error))}
             }
+        }
+    }
+    /// The single block an edit changes, or nil when it needs a full snapshot.
+    static func target(_ edit:DeviceEdit)->(cmd:UInt8,sub:UInt8)? {
+        switch edit {
+        case .effect,.lighting,.lightingBlock: return (0x44,0)
+        case .palette,.paletteReset: return (0x49,0)
+        case .remap(_,let layer,_,_): return (0x41,layer)
+        default: return nil
         }
     }
     private func handle(_ error:Error) {
@@ -155,16 +190,22 @@ public final class DeviceService: @unchecked Sendable {
     }
     private func tick() {
         guard !suspended else{return}
-        if Date()>=nextPoll || hub?.statusChanged()==true {
+        let statusReport=hub?.statusChanged()==true
+        if Date()>=nextPoll || statusReport {
             nextPoll=Date().addingTimeInterval(state.online ? 5:2)
+            let was=(state.snapshot,state.online,state.link,state.message,state.permissionDenied)
             do {
-                try transaction {t in
+                try transaction(background:true) {t in
                     if state.snapshot==nil {try load(t)}
-                    else {state.snapshot?.lighting=try LightingBlock(t.read(0x44,sub:0))}
+                    // Cable reads are one report, so follow Fn-shortcut changes every poll. Over 2.4G the
+                    // keyboard announces them with a 0A report; otherwise re-check every 30 s.
+                    else if t.kind == .cable || statusReport || Date()>=nextLightingRead {
+                        state.snapshot?.lighting=try LightingBlock(t.read(0x44,sub:0));nextLightingRead=Date().addingTimeInterval(30)
+                    }
                 }
                 state.permissionDenied=false
-                if state.recovery==nil && state.progress==0 {state.message=isMock ? "Loaded from mock keyboard":"Loaded from keyboard"}
-                publish()
+                if state.recovery==nil && state.progress==0 && state.snapshot != was.0 {state.message=isMock ? "Loaded from mock keyboard":"Loaded from keyboard"}
+                if was.0 != state.snapshot || was.1 != state.online || was.2 != state.link || was.3 != state.message || was.4 != state.permissionDenied {publish()}
             } catch {handle(error)}
         }
         guard settings.mode != .off,!settings.paused,state.online,let t=transport,let snapshot=state.snapshot else {deliverFrame(nil);return}

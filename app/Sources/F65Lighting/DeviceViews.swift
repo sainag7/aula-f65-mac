@@ -15,7 +15,7 @@ struct LiveLightingView:View {
             Toggle("Pause live lighting",isOn:Binding(get:{model.live.paused},set:{v in model.updateLive{$0.paused=v}}))
             Picker("Connection",selection:Binding(get:{model.live.pref},set:{v in model.updateLive{$0.pref=v}})){ForEach(ConnectionPref.allCases,id:\.self){Text($0.title).tag($0)}}.frame(maxWidth:420)
             if model.device.link == .receiver {Label("2.4G live lighting requires the saved Fixed effect. Changing to another effect stops the live display.",systemImage:"info.circle").foregroundStyle(.secondary)
-                if model.device.snapshot?.lighting.effect != 1 {Button("Save Fixed effect"){model.edit(.effect(1))}.disabled(!model.canWrite)}
+                if model.lighting?.effect != 1 {Button("Save Fixed effect"){model.edit(.effect(1))}.disabled(!model.canWrite)}
             }
             if model.live.mode == .custom {
                 HStack{Button("Open layout.json…"){model.onEditLayout?()};Button("Reload layout"){model.onReloadLayout?()}}
@@ -25,7 +25,7 @@ struct LiveLightingView:View {
                 ForEach(problems,id:\.self){Text($0).foregroundStyle(.orange)}
                 if problems.isEmpty{Label("Layout loaded",systemImage:"checkmark.circle").foregroundStyle(.secondary)}
             }
-        }.disabled(model.busy)
+        }
     }
 }
 struct RestorePointsView:View {

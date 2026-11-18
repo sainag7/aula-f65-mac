@@ -25,9 +25,9 @@ struct LightingView:View {
             LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:10),count:6),spacing:10) {
                 ForEach(1...18,id:\.self){e in
                     Button {model.edit(.effect(e))} label:{
-                        VStack(alignment:.leading,spacing:12){HStack{Image(systemName:effectIcon(e));Spacer();if model.device.snapshot?.lighting.effect==e{Image(systemName:"checkmark.circle.fill")}};Text(LightingBlock.names[e-1]).font(.callout.weight(.medium)).lineLimit(2)}
+                        VStack(alignment:.leading,spacing:12){HStack{Image(systemName:effectIcon(e));Spacer();if model.lighting?.effect==e{Image(systemName:"checkmark.circle.fill")}};Text(LightingBlock.names[e-1]).font(.callout.weight(.medium)).lineLimit(2)}
                             .frame(maxWidth:.infinity,minHeight:62,alignment:.leading).padding(12)
-                            .background(model.device.snapshot?.lighting.effect==e ? Color.accentColor.opacity(0.15):Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:9))
+                            .background(model.lighting?.effect==e ? Color.accentColor.opacity(0.15):Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:9))
                             .overlay(RoundedRectangle(cornerRadius:9).strokeBorder(model.hover==e ? Color.accentColor:Color.secondary.opacity(0.15)))
                     }.buttonStyle(.plain).disabled(!model.canWrite).onHover{inside in if model.active && model.canWrite {model.hover=inside ? e:nil}}
                     .help("Preview \(LightingBlock.names[e-1]); click to save to keyboard")
@@ -36,7 +36,7 @@ struct LightingView:View {
         }.sheet(isPresented:$editingPalette){paletteSheet}
     }
     @ViewBuilder var inspector:some View {
-        if let led=model.device.snapshot?.lighting {
+        if let led=model.lighting {
             VStack(alignment:.leading,spacing:16){
                 Text(led.name).font(.title2.weight(.semibold));Text("Settings saved per effect").font(.caption).foregroundStyle(.secondary)
                 level("Brightness",field:"brightness",value:led.brightness(led.effect))

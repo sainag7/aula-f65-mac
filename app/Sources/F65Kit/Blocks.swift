@@ -45,6 +45,10 @@ public struct LightingBlock: Equatable {
         default: throw F65Error.invalid("Unknown lighting setting.")
         }
     }
+    public mutating func setSlot(_ e: Int, brightness: Int, speed: Int, colour: Int) throws {
+        guard (1...18).contains(e), (0...4).contains(brightness), (0...4).contains(speed), (0...7).contains(colour) else { throw F65Error.invalid("Unsupported effect or value.") }
+        bytes[0x38+2*e] = UInt8(brightness); bytes[0x39+2*e] = UInt8(speed << 4 | colour)
+    }
     public static let names = ["Fixed", "Breathing", "Rainbow", "Flash away", "Raindrops", "Rainbow wheel", "Ripples", "Stars", "Shadow", "Snake", "Neon", "Reaction", "Sine wave", "Scanning", "Windmill", "Waterfall", "Blossom", "Storm"]
     public var name: String { (1...18).contains(effect) ? Self.names[effect-1] : "Unsupported effect \(effect)" }
 }
@@ -82,6 +86,16 @@ public struct Snapshot: Equatable {
     public init(_ t: Transport) throws {
         lighting = try LightingBlock(t.read(0x44, sub: 0)); palette = try Palette(t.read(0x49, sub: 0))
         base = try KeyLayer(t.read(0x41, sub: 0)); fn = try KeyLayer(t.read(0x41, sub: 1))
+    }
+    /// Replace one block with bytes read from (or verified on) the keyboard.
+    public mutating func replace(_ cmd: UInt8, sub: UInt8, bytes: [UInt8]) throws {
+        switch (cmd | 0x40, sub) {
+        case (0x44, 0): lighting = try LightingBlock(bytes)
+        case (0x49, 0): palette = try Palette(bytes)
+        case (0x41, 0): base = try KeyLayer(bytes)
+        case (0x41, 1): fn = try KeyLayer(bytes)
+        default: throw F65Error.invalid("Unknown block.")
+        }
     }
     public var records: [BackupRecord] { [.init(cmd:0x44,sub:0,bytes:lighting.bytes),.init(cmd:0x41,sub:0,bytes:base.bytes),.init(cmd:0x41,sub:1,bytes:fn.bytes),.init(cmd:0x49,sub:0,bytes:palette.bytes)] }
 }

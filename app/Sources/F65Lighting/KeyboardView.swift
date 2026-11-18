@@ -26,7 +26,7 @@ struct KeyboardView:NSViewRepresentable {
     }
     func updateNSView(_ web:WKWebView,context:Context) {
         let snapshot=model.device.snapshot
-        let led=snapshot?.lighting
+        let led=model.lighting
         let e=model.hover ?? led?.effect ?? 1
         let state:[String:Any]=["display":model.webFailure ? "flat":display,"flatStyle":style,"camera":camera,"colourway":colourway,"effect":led?.effect ?? 1,"preview":model.hover as Any? ?? NSNull(),"brightness":min(4,led?.brightness(e) ?? 0),"speed":min(4,led?.speed(e) ?? 0),"colour":min(7,led?.colour(e) ?? 7),"palette":(snapshot?.palette.colours ?? Palette.factory).map{[Int($0.r),Int($0.g),Int($0.b)]},"fnLayer":model.section=="Keys" && model.layer==1,"reduceMotion":reduced]
         var legends:[String:String]=[:]

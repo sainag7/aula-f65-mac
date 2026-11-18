@@ -189,7 +189,9 @@ function lightFor(eff,k,now){
     case 15:{const a=Math.atan2(k.cy-2.5,(k.cx-8)/2.2);i=Math.pow(Math.max(0,Math.cos(2*(a-T*1.6))),3);break;}
     case 16:h=k.cy*55-T*130;i=.65+.35*Math.sin(k.cy*1.3-T*4);break;
     case 17:{const d=Math.hypot((k.cx-8)/1.6,k.cy-2.5);h=d*40-T*90;i=.55+.45*Math.sin(d*1.4-T*3);break;}
-    case 18:{const f=Math.floor(T*3),fr=T*3-f;let x=Math.sin((Math.floor(k.cx/3)*7+f*13)*12.9)*9999;x-=Math.floor(x);i=x>.72?Math.pow(1-fr,2):.06;h=multi?220+x*60:h;break;}
+    // Storm: dim base, frequent lightning bursts across random column bands, with a double strike.
+    case 18:{const f=Math.floor(T*2.4),fr=T*2.4-f;let x=Math.sin((Math.floor(k.cx/2.5)*7+f*13)*12.9)*9999;x-=Math.floor(x);
+      const strike=x>.55?Math.max(Math.pow(1-fr,2),fr>.25&&fr<.45?.8:0):0;i=Math.max(.22,strike);h=multi?200+x*80:h;break;}
   }
   return [h,Math.max(0,Math.min(1,i*b))];
 }

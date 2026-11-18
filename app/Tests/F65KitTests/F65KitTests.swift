@@ -124,6 +124,24 @@ final class DeviceServiceTests: XCTestCase {
         }
         wait(for:[done],timeout:5);XCTAssertEqual(try Snapshot(m),original)
     }
+    func testSingleBlockSaveReadsOnlyThatBlock() throws {
+        let m=MockTransport(kind:.receiver);let dir=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let service=DeviceService(mock:m,backups:BackupStore(directory:dir));defer{service.stop();try? FileManager.default.removeItem(at:dir)}
+        let loaded=expectation(description:"loaded");service.perform(.refresh){_ in loaded.fulfill()};wait(for:[loaded],timeout:5)
+        m.readLog=[]
+        let saved=expectation(description:"saved");service.perform(.effect(18)){r in if case .failure(let e)=r{XCTFail(e.localizedDescription)};saved.fulfill()}
+        wait(for:[saved],timeout:5)
+        XCTAssertFalse(m.readLog.contains(0x49));XCTAssertFalse(m.readLog.contains(0x41));XCTAssertFalse(m.readLog.contains(0x43))
+        XCTAssertEqual(try LightingBlock(m.read(0x44)).effect,18)
+    }
+    func testQueuedLightingBlockAppliesEveryChoice() throws {
+        let m=MockTransport();let dir=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let service=DeviceService(mock:m,backups:BackupStore(directory:dir));defer{service.stop();try? FileManager.default.removeItem(at:dir)}
+        var desired=try LightingBlock(m.read(0x44));try desired.setEffect(6);try desired.set("brightness",value:2);try desired.set("colour",value:3)
+        let saved=expectation(description:"saved");service.perform(.lightingBlock(desired)){r in if case .failure(let e)=r{XCTFail(e.localizedDescription)};saved.fulfill()}
+        wait(for:[saved],timeout:5)
+        let led=try LightingBlock(m.read(0x44));XCTAssertEqual(led.effect,6);XCTAssertEqual(led.brightness(6),2);XCTAssertEqual(led.colour(6),3);XCTAssertEqual(m.writes,1)
+    }
     func testHiddenRowsMaskedAfterRemap() {
         var s=Settings();s.mode = .solid
         let f=FrameRenderer.render(s,map:KeyMap.fallback,time:0,receiver:false)
