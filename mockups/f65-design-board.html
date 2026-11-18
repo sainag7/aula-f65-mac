@@ -1,0 +1,945 @@
+<title>F65 Lighting Design Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Exo+2:wght@300;400;600&family=JetBrains+Mono:wght@400;600&family=Sora:wght@300;400;600&display=swap">
+<style>
+/* Layout: a design board. Sticky switcher bar, then a scaled macOS window "stage" with notes beside it,
+   then the inventory, direction comparison and motion tokens. Page chrome follows the viewer's theme;
+   the mocked app windows are always dark (the brief asks for dark-mode contrast). */
+:root{
+  --pg:#F3F4F6; --pg2:#FFFFFF; --ink:#16181D; --ink2:#5A6170; --rule:#D9DCE3; --desk:#C9CDD6;
+  --tag-ok:#1F7A45; --tag-ok-bg:#DDF3E5; --tag-un:#8A5300; --tag-un-bg:#FCEBCB; --tag-ro:#3D4D8C; --tag-ro-bg:#E1E6FA; --tag-out:#6B6F78; --tag-out-bg:#E7E8EB;
+  --focus:#2F6FEB;
+  --f-head:"Barlow Semi Condensed","Avenir Next Condensed",system-ui,sans-serif;
+  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --pg:#0F1013; --pg2:#17191D; --ink:#ECEEF2; --ink2:#A2A8B5; --rule:#2A2D34; --desk:#22252B;
+  --tag-ok:#7EE0A4; --tag-ok-bg:#16301F; --tag-un:#FFC876; --tag-un-bg:#33270F; --tag-ro:#A9B8FF; --tag-ro-bg:#1C2340; --tag-out:#A3A7B0; --tag-out-bg:#24262B;
+  --focus:#7FA7FF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --pg:#0F1013; --pg2:#17191D; --ink:#ECEEF2; --ink2:#A2A8B5; --rule:#2A2D34; --desk:#22252B;
+  --tag-ok:#7EE0A4; --tag-ok-bg:#16301F; --tag-un:#FFC876; --tag-un-bg:#33270F; --tag-ro:#A9B8FF; --tag-ro-bg:#1C2340; --tag-out:#A3A7B0; --tag-out-bg:#24262B;
+  --focus:#7FA7FF; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--pg);color:var(--ink);font:15px/1.55 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--pg)}
+.wrap{max-width:1480px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-head);text-wrap:balance;margin:0;letter-spacing:.005em}
+h1{font-size:clamp(30px,4vw,46px);font-weight:600;line-height:1.05}
+h2{font-size:28px;font-weight:600}
+h3{font-size:18px;font-weight:600}
+p{margin:0}
+.lede{max-width:68ch;color:var(--ink2);margin-top:10px}
+header.page{padding-block:36px 18px;display:grid;gap:6px}
+.eyebrow{font:600 12px/1 var(--f-head);letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* sticky switcher */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--pg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule);padding-block:10px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.ctl{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.ctl>label,.ctl>span.l{font:600 11px/1 var(--f-head);letter-spacing:.13em;text-transform:uppercase;color:var(--ink2)}
+.pills{display:flex;flex-wrap:wrap;gap:4px;background:var(--pg2);border:1px solid var(--rule);border-radius:9px;padding:3px}
+.pills button{font:500 13px/1 var(--f-body);color:var(--ink2);background:none;border:0;border-radius:6px;padding:7px 10px;cursor:pointer;white-space:nowrap}
+.pills button[aria-pressed="true"]{background:var(--ink);color:var(--pg)}
+.pills button .star{font-size:10px;margin-left:4px;opacity:.8}
+.toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2);cursor:pointer}
+.toggle input{accent-color:var(--ink)}
+
+/* stage + notes */
+.stagewrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;margin-top:22px;align-items:start}
+@media (max-width:1100px){.stagewrap{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;overflow:hidden;border-radius:14px;background:var(--desk)}
+.scaler{position:absolute;left:0;top:0;width:1160px;height:740px;transform-origin:0 0}
+.notes{display:grid;gap:16px;min-width:0}
+.notes h3{font-size:22px}
+.notes .sub{color:var(--ink2);font-size:14px}
+.nblock{display:grid;gap:6px}
+.nblock h4{margin:0;font:600 11px/1 var(--f-head);letter-spacing:.13em;text-transform:uppercase;color:var(--ink2)}
+.nblock ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.mtable{width:100%;border-collapse:collapse;font-size:12.5px}
+.mtable th{text-align:left;font:600 10.5px/1.2 var(--f-head);letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);padding:6px 6px 6px 0;border-bottom:1px solid var(--rule)}
+.mtable td{padding:7px 6px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+.mtable td.t{font-family:var(--f-mono);font-size:11.5px;white-space:nowrap}
+.mono{font-family:var(--f-mono);font-size:.92em}
+.statepick{display:flex;flex-wrap:wrap;gap:4px}
+.small{font-size:13px;color:var(--ink2)}
+
+section.sec{margin-top:56px;display:grid;gap:16px}
+.tablebox{overflow-x:auto;border:1px solid var(--rule);border-radius:12px;background:var(--pg2)}
+table.inv{border-collapse:collapse;width:100%;min-width:860px;font-size:14px}
+table.inv th{text-align:left;font:600 11px/1.2 var(--f-head);letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);padding:12px 14px;border-bottom:1px solid var(--rule);background:var(--pg2);position:sticky;top:0}
+table.inv td{padding:12px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+table.inv tr:last-child td{border-bottom:0}
+table.inv td:first-child{font-weight:600;white-space:nowrap}
+table.inv td.src{font-family:var(--f-mono);font-size:12px;color:var(--ink2)}
+.tag{display:inline-block;font:600 11px/1 var(--f-head);letter-spacing:.08em;text-transform:uppercase;padding:5px 7px;border-radius:5px;white-space:nowrap}
+.tag.ok{color:var(--tag-ok);background:var(--tag-ok-bg)}.tag.un{color:var(--tag-un);background:var(--tag-un-bg)}.tag.ro{color:var(--tag-ro);background:var(--tag-ro-bg)}.tag.out{color:var(--tag-out);background:var(--tag-out-bg)}
+.dircards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.dircards{grid-template-columns:minmax(0,1fr)}}
+.dcard{border:1px solid var(--rule);border-radius:12px;background:var(--pg2);padding:18px;display:grid;gap:10px;align-content:start;min-width:0}
+.dcard.rec{border-color:var(--ink)}
+.dcard.cur{outline:2px solid var(--focus);outline-offset:2px}
+.dcard .sw{display:flex;gap:6px}
+.dcard .sw i{width:28px;height:28px;border-radius:6px;border:1px solid var(--rule)}
+.dcard ul{margin:0;padding-left:18px;font-size:14px;display:grid;gap:3px}
+.dcard button{justify-self:start;font:500 13px var(--f-body);border:1px solid var(--rule);background:var(--pg);color:var(--ink);border-radius:7px;padding:7px 11px;cursor:pointer}
+.verdict{font:600 12px/1 var(--f-head);letter-spacing:.1em;text-transform:uppercase}
+
+/* =============================== THE MOCK WINDOW =============================== */
+.win{position:absolute;inset:0;display:grid;grid-template-rows:52px 1fr 46px;border-radius:12px;overflow:hidden;color:var(--fg);background:var(--bg);font:13px/1.4 var(--f-body);
+  box-shadow:0 30px 70px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.4);transition:background .22s}
+.win *{box-sizing:border-box}
+/* Direction tokens */
+.win[data-dir="glass"]{--bg:#060B16;--side:rgba(120,170,230,.07);--panel:rgba(140,190,255,.075);--well:rgba(4,10,22,.55);--line:rgba(170,215,255,.20);--fg:#EAF4FF;--fg2:#A9BDD3;--acc:#7FDBFF;--acc-ink:#03141D;--acc-soft:rgba(127,219,255,.16);--ok:#5EF0B0;--warn:#FFC86B;--err:#FF8794;--fd:"Exo 2",system-ui,sans-serif;--r:14px;--cap:none;--track:.02em}
+.win[data-dir="inst"]{--bg:#121315;--side:#17181B;--panel:#1A1B1E;--well:#0B0C0D;--line:#2F3135;--fg:#EDE8DB;--fg2:#AAA597;--acc:#E9B65A;--acc-ink:#1C1405;--acc-soft:rgba(233,182,90,.14);--ok:#6FD98A;--warn:#FF8A3D;--err:#FF5E57;--fd:"Barlow Semi Condensed",system-ui,sans-serif;--r:6px;--cap:uppercase;--track:.12em}
+.win[data-dir="neon"]{--bg:#040406;--side:#040406;--panel:transparent;--well:#000;--line:#25252D;--fg:#F3F3F7;--fg2:#9D9DAB;--acc:#FF5BD6;--acc2:#4FE3FF;--acc-ink:#19020F;--acc-soft:rgba(255,91,214,.12);--ok:#59F2A6;--warn:#FFD25E;--err:#FF5A6E;--fd:"Sora",system-ui,sans-serif;--r:4px;--cap:none;--track:0}
+.win[data-dir="glass"]{background:radial-gradient(900px 500px at 78% -10%,rgba(80,150,255,.28),transparent 60%),radial-gradient(700px 520px at 0% 110%,rgba(0,220,200,.16),transparent 60%),#060B16}
+.win[data-dir="inst"]{background:linear-gradient(#141517,#101113)}
+/* titlebar / toolbar */
+.tbar{display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--side)}
+.lights{display:flex;gap:8px}.lights i{width:12px;height:12px;border-radius:50%;background:#FF5F57}.lights i:nth-child(2){background:#FEBC2E}.lights i:nth-child(3){background:#28C840}
+.wname{font:600 13px var(--f-body);margin-left:6px}
+.win[data-dir="inst"] .wname{font:600 14px var(--fd);letter-spacing:.14em;text-transform:uppercase}
+.win[data-dir="glass"] .wname{font:400 15px var(--fd);letter-spacing:.18em;text-transform:uppercase}
+.win[data-dir="neon"] .wname{font:600 14px var(--fd)}
+.tstat{margin-left:auto;display:flex;align-items:center;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);color:var(--fg2);font-size:12px;white-space:nowrap}
+.chip svg{width:14px;height:14px}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--fg2)}
+.chip.ok{color:var(--fg)}.chip.ok .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.chip.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}.chip.warn .dot{background:var(--warn)}
+.chip.err{color:var(--err);border-color:color-mix(in srgb,var(--err) 45%,transparent)}.chip.err .dot{background:var(--err)}
+.chip.un{border-style:dashed}
+.tbtn{width:30px;height:28px;border-radius:7px;border:1px solid var(--line);display:grid;place-items:center;color:var(--fg2);background:transparent}
+.tbtn svg{width:15px;height:15px}
+/* instrument annunciators replace pill chips */
+.win[data-dir="inst"] .chip{border-radius:3px;height:24px;font:600 11.5px var(--fd);letter-spacing:.1em;text-transform:uppercase;background:#0D0E0F;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.win[data-dir="inst"] .chip .dot{border-radius:1px;width:10px;height:6px}
+.win[data-dir="glass"] .chip{background:rgba(255,255,255,.04);backdrop-filter:blur(8px)}
+.win[data-dir="neon"] .chip{border-radius:2px}
+.win[data-dir="neon"] .chip.ok .dot{box-shadow:0 0 10px var(--ok),0 0 2px var(--ok)}
+
+.wbody{display:grid;grid-template-columns:196px 1fr;min-height:0}
+nav.side{border-right:1px solid var(--line);background:var(--side);padding:14px 10px;display:flex;flex-direction:column;gap:2px;min-height:0}
+.side .grp{font:600 11px var(--f-body);color:var(--fg2);padding:6px 10px 8px;letter-spacing:.02em}
+.win[data-dir="inst"] .side .grp{font:600 11px var(--fd);letter-spacing:.16em;text-transform:uppercase}
+.navi{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;color:var(--fg);cursor:pointer;border:1px solid transparent;font-size:13px;background:none;text-align:left;width:100%}
+.navi svg{width:17px;height:17px;color:var(--acc);flex:none}
+.navi.dim{color:var(--fg2)}.navi.dim svg{color:var(--fg2)}
+.navi .badge{margin-left:auto;font-size:10px;color:var(--fg2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.navi[aria-current="page"]{background:var(--acc-soft)}
+.win[data-dir="inst"] .navi[aria-current="page"]{background:#222327;border-color:#34363B;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.win[data-dir="inst"] .navi[aria-current="page"] svg{filter:drop-shadow(0 0 4px rgba(233,182,90,.6))}
+.win[data-dir="glass"] .navi[aria-current="page"]{background:rgba(127,219,255,.12);border-color:rgba(127,219,255,.28)}
+.win[data-dir="neon"] .navi[aria-current="page"]{background:none;border-color:var(--acc);box-shadow:0 0 14px rgba(255,91,214,.25)}
+.side .foot{margin-top:auto;font-size:11px;color:var(--fg2);padding:8px 10px;line-height:1.45}
+
+main.wc{min-height:0;overflow:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.whead{display:flex;align-items:flex-end;gap:14px}
+.whead h2{font:600 26px/1.05 var(--fd);color:var(--fg);letter-spacing:0}
+.win[data-dir="glass"] .whead h2{font-weight:300;font-size:30px;letter-spacing:.02em}
+.win[data-dir="inst"] .whead h2{text-transform:uppercase;letter-spacing:.06em;font-size:28px}
+.win[data-dir="neon"] .whead h2{font-weight:300;font-size:30px;letter-spacing:-.01em}
+.whead .s{color:var(--fg2);padding-bottom:3px}
+.whead .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.lbl{font:600 11px/1 var(--fd);letter-spacing:var(--track);text-transform:var(--cap);color:var(--fg2)}
+.win[data-dir="glass"] .lbl{letter-spacing:.14em;text-transform:uppercase;font-weight:400}
+.win[data-dir="neon"] .lbl{font-weight:400;font-size:12px}
+
+.panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.win[data-dir="glass"] .panel{backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.win[data-dir="glass"] .panel::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(var(--acc),var(--acc)) 0 0/14px 1px,linear-gradient(var(--acc),var(--acc)) 0 0/1px 14px,linear-gradient(var(--acc),var(--acc)) 100% 100%/14px 1px,linear-gradient(var(--acc),var(--acc)) 100% 100%/1px 14px;background-repeat:no-repeat;opacity:.7}
+.win[data-dir="inst"] .panel{box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 1px 0 rgba(0,0,0,.6)}
+.win[data-dir="neon"] .panel{padding:14px 0 0;border-width:1px 0 0;border-radius:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hint{font-size:11.5px;color:var(--fg2);line-height:1.4}
+.unconf{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--warn);border:1px dashed color-mix(in srgb,var(--warn) 60%,transparent);border-radius:4px;padding:2px 6px}
+
+/* segmented control */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:rgba(0,0,0,.18)}
+.seg button{border:0;background:none;color:var(--fg2);font:500 12px var(--f-body);padding:6px 11px;min-width:34px;cursor:pointer;border-right:1px solid var(--line);transition:background .12s ease-out,color .12s ease-out}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--acc);color:var(--acc-ink);font-weight:600}
+.win[data-dir="inst"] .seg{border-radius:4px;background:#0C0D0E;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.win[data-dir="inst"] .seg button{font:600 12px var(--f-mono)}
+.win[data-dir="inst"] .seg.w button{font:600 11.5px var(--fd);letter-spacing:.08em;text-transform:uppercase}
+.win[data-dir="inst"] .seg button[aria-pressed="true"]{background:linear-gradient(#F0C470,#D9A247);box-shadow:inset 0 -1px 0 rgba(0,0,0,.3)}
+.win[data-dir="neon"] .seg{background:none;border-radius:2px}
+.win[data-dir="neon"] .seg button[aria-pressed="true"]{background:none;color:var(--acc);box-shadow:inset 0 -2px 0 var(--acc);text-shadow:0 0 10px rgba(255,91,214,.6)}
+.ticks{display:flex;justify-content:space-between;padding:0 6px;font:10px var(--f-mono);color:var(--fg2)}
+.win:not([data-dir="inst"]) .ticks{display:none}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg);font:500 12px var(--f-body);padding:6px 11px;border-radius:7px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn svg{width:14px;height:14px}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:transparent;font-weight:600}
+.win[data-dir="neon"] .btn.pri{background:none;color:var(--acc);border-color:var(--acc);box-shadow:0 0 12px rgba(255,91,214,.25)}
+.win[data-dir="inst"] .btn{border-radius:4px;font:600 11.5px var(--fd);letter-spacing:.08em;text-transform:uppercase}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+select.sel{appearance:none;background:rgba(0,0,0,.25) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 9px center;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 26px 6px 10px;font:500 12px var(--f-body)}
+.win[data-dir="inst"] select.sel{border-radius:4px;background-color:#0C0D0E}
+
+/* swatches */
+.sws{display:flex;gap:7px;flex-wrap:wrap}
+.swb{width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.25);cursor:pointer;position:relative;padding:0}
+.swb[aria-pressed="true"]{outline:2px solid var(--acc);outline-offset:2px}
+.swb.multi{background:conic-gradient(#f33,#fd3,#3f6,#3df,#36f,#f3d,#f33)}
+.swb[disabled]{opacity:.35;cursor:not-allowed}
+.win[data-dir="inst"] .swb{border-radius:4px}
+.win[data-dir="neon"] .swb[aria-pressed="true"]{outline-color:var(--acc);box-shadow:0 0 14px rgba(255,91,214,.45)}
+
+/* keyboard well */
+.well{position:relative;border-radius:var(--r);background:var(--well);border:1px solid var(--line);overflow:hidden}
+.win[data-dir="glass"] .well{background:radial-gradient(70% 90% at 50% 30%,rgba(60,120,200,.22),rgba(3,8,18,.6))}
+.win[data-dir="inst"] .well{background:radial-gradient(80% 100% at 50% 20%,#1A1B1E,#0A0B0C);box-shadow:inset 0 2px 10px rgba(0,0,0,.7)}
+.win[data-dir="inst"] .well::after{content:"";position:absolute;inset:auto 14px 10px;height:8px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(237,232,219,.25) 0 1px,transparent 1px 5.33%)}
+.win[data-dir="neon"] .well{border-radius:0;border-width:0 0 1px;background:radial-gradient(60% 70% at 50% 60%,#0C0710,#000)}
+.kb{position:absolute;inset:0}
+.kb canvas{display:block;width:100%!important;height:100%!important}
+.kb.fail{display:grid;place-items:center;color:var(--fg2);font-size:12px}
+.wcap{position:absolute;left:12px;top:10px;display:flex;gap:8px;align-items:center;z-index:2}
+.wcap2{position:absolute;right:12px;top:10px;z-index:2;display:flex;gap:8px}
+.well.dimmed .kb{opacity:.42;filter:saturate(.3);transition:opacity .22s,filter .22s}
+.well.ghost .kb{opacity:.14;filter:grayscale(1)}
+
+/* effect grid */
+.fx{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.fxb{position:relative;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:calc(var(--r) - 2px);padding:7px 9px;color:var(--fg);cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0;transition:border-color .12s ease-out,box-shadow .12s ease-out}
+.fxb .n{font:600 10px var(--f-mono);color:var(--fg2)}
+.fxb .t{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fxb .k{position:absolute;right:7px;top:7px;width:10px;height:10px;color:var(--fg2)}
+.fxb[aria-pressed="true"]{border-color:var(--acc);background:var(--acc-soft)}
+.fxb[aria-pressed="true"] .n{color:var(--acc)}
+.win[data-dir="inst"] .fxb{background:#0F1011;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.win[data-dir="inst"] .fxb[aria-pressed="true"]{background:#1F1A10;box-shadow:inset 0 0 0 1px var(--acc),0 0 12px rgba(233,182,90,.18)}
+.win[data-dir="neon"] .fxb{background:none;border-radius:2px}
+.win[data-dir="neon"] .fxb[aria-pressed="true"]{background:none;box-shadow:0 0 0 1px var(--acc),0 0 16px rgba(255,91,214,.3)}
+.fxb .spin{position:absolute;right:6px;bottom:6px;width:12px;height:12px;border-radius:50%;border:2px solid var(--acc-soft);border-top-color:var(--acc);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* layout grids */
+.g-light{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;min-height:0}
+.insp{display:flex;flex-direction:column;gap:12px;min-width:0}
+.insp .ttl{font:600 18px var(--fd)}
+.win[data-dir="inst"] .insp .ttl{text-transform:uppercase;letter-spacing:.06em}
+.readout{font:600 12px var(--f-mono);color:var(--acc)}
+.banner{display:flex;gap:12px;align-items:center;border-radius:var(--r);padding:11px 14px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.banner svg{width:20px;height:20px;flex:none}
+.banner.wake{border:2px solid var(--acc);background:var(--acc-soft)}
+.banner.wake.pulse{animation:wake 2.4s ease-in-out infinite}
+@keyframes wake{0%,100%{border-color:color-mix(in srgb,var(--acc) 18%,transparent)}50%{border-color:color-mix(in srgb,var(--acc) 90%,transparent)}}
+.banner.err{border-color:color-mix(in srgb,var(--err) 60%,transparent);color:var(--fg)}.banner.err svg{color:var(--err)}
+.banner.warn{border-color:color-mix(in srgb,var(--warn) 55%,transparent)}.banner.warn svg{color:var(--warn)}
+.banner .grow{flex:1;min-width:0}
+.banner b{font-weight:600}
+
+/* statusbar */
+.sbar{border-top:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--side)}
+.pk{display:flex;gap:2px;width:300px;flex:none}
+.pk i{flex:1;height:5px;border-radius:2px;background:color-mix(in srgb,var(--fg2) 22%,transparent);transition:background .12s ease-out,box-shadow .12s ease-out}
+.pk i.on{background:var(--acc)}
+.pk i.rs{background:var(--warn)}
+.win[data-dir="inst"] .pk i{height:8px;border-radius:1px}
+.win[data-dir="inst"] .pk i.on{box-shadow:0 0 6px rgba(233,182,90,.6)}
+.win[data-dir="neon"] .pk i.on{box-shadow:0 0 8px var(--acc)}
+.pk.idle{opacity:.0}
+.smsg{font-size:12px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.smsg b{color:var(--fg);font-weight:600}
+.steps{margin-left:auto;display:flex;gap:6px}
+.step{font:600 10.5px var(--fd);letter-spacing:.08em;text-transform:uppercase;color:var(--fg2);border:1px solid var(--line);padding:3px 7px;border-radius:4px;white-space:nowrap}
+.win[data-dir="neon"] .step,.win[data-dir="glass"] .step{text-transform:none;letter-spacing:0;font-weight:400;font-size:11.5px}
+.step.done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+.step.now{color:var(--acc);border-color:var(--acc)}
+.queued{font-size:11.5px;color:var(--fg);border:1px dashed var(--acc);border-radius:999px;padding:3px 9px;white-space:nowrap}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;min-height:0;flex:1}
+.hero .well{min-height:0}
+.hero .stack{display:grid;grid-template-rows:1fr auto;gap:14px;min-height:0}
+.gauges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.gauge{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.02);min-width:0}
+.gauge .v{font:600 18px var(--fd);color:var(--fg)}
+.gauge .bars{display:flex;gap:3px}.gauge .bars i{flex:1;height:6px;border-radius:1px;background:color-mix(in srgb,var(--fg2) 22%,transparent)}.gauge .bars i.on{background:var(--acc)}
+.win[data-dir="inst"] .gauge{background:#0D0E0F;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.win[data-dir="inst"] .gauge .v{font:600 20px var(--f-mono);color:var(--acc)}
+.win[data-dir="glass"] .gauge{backdrop-filter:blur(10px)}
+.win[data-dir="glass"] .gauge .v{font-weight:300;font-size:20px}
+.win[data-dir="neon"] .gauge{border-width:0 0 0 1px;border-radius:0;background:none}
+.win[data-dir="neon"] .gauge .v{font-weight:300;font-size:22px}
+
+/* keys */
+.kgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12.5px}
+.kv dt{color:var(--fg2)}.kv dd{margin:0}
+.lock{display:flex;gap:8px;align-items:flex-start;color:var(--warn);font-size:12px}
+.lock svg{width:16px;height:16px;flex:none}
+
+/* restore */
+.rlist{display:flex;flex-direction:column}
+.rrow{display:grid;grid-template-columns:1.6fr .9fr .9fr auto;gap:12px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);font-size:12.5px}
+.rrow.h{font:600 10.5px var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--fg2)}
+.rrow .fn{font:12px var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex{font:600 10px var(--fd);letter-spacing:.1em;text-transform:uppercase;color:var(--fg2);border:1px solid var(--line);border-radius:3px;padding:2px 5px}
+
+/* connection states */
+.cstates{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.cs{border:1px solid var(--line);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:rgba(255,255,255,.02);color:var(--fg);text-align:left;font:inherit}
+.cs svg{width:18px;height:18px}
+.cs .t{font-weight:600;font-size:12.5px}
+.cs .m{font-size:11px;color:var(--fg2)}
+.cs[aria-pressed="true"]{border-color:var(--acc);background:var(--acc-soft)}
+
+/* settings */
+.form{display:grid;grid-template-columns:170px 1fr;gap:12px 18px;align-items:center}
+.form .k{color:var(--fg2);font-size:12.5px}
+
+/* live */
+.capbar{height:8px;border-radius:2px;background:color-mix(in srgb,var(--fg2) 18%,transparent);overflow:hidden;display:flex}
+.capbar i{background:var(--acc)}.capbar i.p{background:var(--ok)}
+.kchips{display:flex;flex-wrap:wrap;gap:5px}
+.kchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:5px;padding:3px 7px;font:600 11px var(--f-mono)}
+.kchip i{width:10px;height:10px;border-radius:2px}
+.switch{width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none}
+.switch::after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.switch.off{background:color-mix(in srgb,var(--fg2) 35%,transparent)}.switch.off::after{right:auto;left:2px}
+
+/* menu bar scene */
+.desk{position:absolute;inset:0;border-radius:12px;overflow:hidden}
+.win[data-dir="glass"] .desk{background:radial-gradient(800px 500px at 70% 20%,#1d4d8a,#081428 70%)}
+.win[data-dir="inst"] .desk{background:radial-gradient(900px 600px at 30% 30%,#3a3428,#141210 70%)}
+.win[data-dir="neon"] .desk{background:radial-gradient(700px 500px at 75% 30%,#2a0a2a,#030304 70%)}
+.mbar{height:28px;display:flex;align-items:center;gap:18px;padding:0 14px;background:rgba(20,20,24,.55);backdrop-filter:blur(20px);color:#F2F2F5;font-size:13px}
+.mbar .r{margin-left:auto;display:flex;gap:16px;align-items:center}
+.mbar .si{display:grid;place-items:center;width:30px;height:22px;border-radius:5px;background:rgba(255,255,255,.22)}
+.mbar svg{width:17px;height:17px}
+.pop{position:absolute;right:120px;top:36px;width:320px;border-radius:12px;padding:12px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(24px);border:1px solid var(--line);
+  box-shadow:0 24px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px;transform-origin:85% 0;animation:popin .2s cubic-bezier(.2,.9,.3,1.0)}
+.pop.closing{animation:popout .13s ease-in forwards}
+@keyframes popin{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes popout{to{opacity:0;transform:scale(.97) translateY(-2px)}}
+.pop .hd{display:flex;align-items:center;gap:8px}
+.pop .hd b{font:600 14px var(--fd)}
+.pop .mi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:13px}
+.pop .mi:hover{background:var(--acc-soft)}
+.pop .mi kbd{margin-left:auto;font:11px var(--f-body);color:var(--fg2)}
+.pop hr{border:0;border-top:1px solid var(--line);margin:0}
+.pop .seg{display:flex}.pop .seg button{flex:1;padding:6px 4px}
+
+.rm *{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){.win *{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="page">
+  <span class="eyebrow">AULA F65 · macOS app design board</span>
+  <h1>F65 Lighting Design Board</h1>
+  <p class="lede">Three visual directions for the native F65 app, built around what F65Kit can actually do today. Switch the direction and the screen below. The 3D keyboard is live: drag to orbit, click keycaps to press them (reactive effects respond), and click effects, swatches and keys inside the window. Sample keyboard state is marked as an example; every limit and number comes from the backend source.</p>
+</header>
+
+<div class="bar" role="toolbar" aria-label="Design board controls">
+  <div class="ctl"><span class="l">Direction</span><div class="pills" id="pDir"></div></div>
+  <div class="ctl"><span class="l">Screen</span><div class="pills" id="pScr"></div></div>
+  <div class="ctl"><span class="l">Keyboard</span><div class="pills" id="pConn"></div></div>
+  <label class="toggle"><input type="checkbox" id="rmT"> Preview Reduce Motion</label>
+</div>
+
+<div class="stagewrap">
+  <div class="stage" id="stage"><div class="scaler" id="scaler"><div class="win" id="win" data-dir="inst"></div></div></div>
+  <aside class="notes" id="notes" aria-live="polite"></aside>
+</div>
+
+<section class="sec" id="directions">
+  <div><span class="eyebrow">Step 2</span><h2>Three directions</h2><p class="lede">Each direction keeps the native skeleton: sidebar, unified toolbar, SF Symbols (drawn here as stand-in line icons), system text. What changes is the material, the type for labels and readouts, and how state is drawn.</p></div>
+  <div class="dircards" id="dircards"></div>
+</section>
+
+<section class="sec" id="inventory">
+  <div><span class="eyebrow">Step 1</span><h2>What the backend can do</h2><p class="lede">Read from <span class="mono">app/Sources/F65Kit</span>. Status: <span class="tag ok">Supported</span> ships now, <span class="tag un">Unconfirmed</span> must be labelled in the UI, <span class="tag ro">Read only</span> shown but never written, <span class="tag out">Out of scope</span> no UI.</p></div>
+  <div class="tablebox"><table class="inv" id="invT"><thead><tr><th>Capability</th><th>Real limits</th><th>Source</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section class="sec" id="motion">
+  <div><span class="eyebrow">Step 4</span><h2>Motion tokens</h2><p class="lede">The existing tokens from the app and the earlier mockups, plus three proposed ones (marked). With Reduce Motion on, nothing moves position or scale; state changes become instant or a short opacity change, and animated previews hold one still frame. Lighting on the keyboard itself is hardware output and is never changed by this setting.</p></div>
+  <div class="tablebox"><table class="inv" id="motT"><thead><tr><th>Token</th><th>Value</th><th>Used for</th><th>Reduce Motion</th></tr></thead><tbody></tbody></table></div>
+</section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+(()=>{
+// ===================================================================== data
+const OSRM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const S={dir:"inst",screen:"hero",conn:"rf",cw:"white",rm:OSRM,onboard:16,slots:{},layer:"base",sel:"caps",live:{mode:"effect",bg:16,spd:2,multi:true,bri:100,pinned:["w","a","s","d"]},display:"3d",camera:"three",login:"off",pref:"auto",side:{e:1,c:7,b:3,s:2}};
+for(let e=1;e<=18;e++)S.slots[e]={bri:4,spd:2,col:7};
+const ENAME=["Fixed","Breathing","Rainbow","Flash away","Raindrops","Rainbow wheel","Ripples","Stars","Shadow","Snake","Neon","Reaction","Sine wave","Scanning","Windmill","Waterfall","Blossom","Storm"];
+const REACTIVE=[4,7,9,12];
+const BG_AVAIL=[16,10,2,3,5,6,8,11,13,14,15,17,18];
+const SIDE_FX=["Off","Rainbow flow","Colour cycle","Solid","Breathing"];
+const PAL=[[255,0,0],[0,255,0],[0,0,255],[255,255,0],[255,0,255],[0,255,255],[255,255,255]];
+const hexOf=c=>"#"+c.map(v=>v.toString(16).padStart(2,"0")).join("");
+// PhysicalKey.rows / indices from Blocks.swift (LED slot = col*6+row)
+const PROWS=["esc d1 d2 d3 d4 d5 d6 d7 d8 d9 d0 minus equal bksp del","tab q w e r t y u i o p lbr rbr bslash pgup","caps a s d f g h j k l semi quote enter pgdn","lshift z x c v b n m comma period slash rshift up end","lctrl lwin lalt space fn rctrl left down right"].map(r=>r.split(" "));
+const PIDX=[[1,7,13,19,25,31,37,43,49,55,61,67,73,79,91],[2,8,14,20,26,32,38,44,50,56,62,68,74,80,92],[3,9,15,21,27,33,39,45,51,57,63,69,81,93],[4,10,16,22,28,34,40,46,52,58,64,82,88,94],[5,11,17,35,59,65,83,89,95]];
+const SLOTOF={};PROWS.forEach((r,y)=>r.forEach((id,x)=>SLOTOF[id]=PIDX[y][x]));
+// Packets per block over 2.4G: ceil(bytes/14). Cable: one feature report per block.
+const PK={lighting:Math.ceil(128/14),palette:Math.ceil(490/14),layer:Math.ceil(504/14)};
+const CONN={
+  cable:{t:"Cable",chips:[["ok","Online"],["","USB cable · 258A:010C","cable"]],write:true},
+  rf:{t:"2.4G",chips:[["ok","Online"],["","2.4G · 3554:FA09","rf"],["un","Battery · unconfirmed","bat"]],write:true},
+  asleep:{t:"Asleep",chips:[["warn","Asleep"],["","2.4G · 3554:FA09","rf"],["un","Battery · unconfirmed","bat"]],write:false},
+  offline:{t:"Offline",chips:[["","Not connected"]],write:false},
+  noperm:{t:"No permission",chips:[["err","Needs Input Monitoring"]],write:false}
+};
+const SCREENS=[["hero","Hero"],["lighting","Lighting"],["live","Live lighting"],["keys","Keys"],["restore","Restore points"],["conn","Connection"],["settings","Settings"],["saving","Save in progress"],["menu","Menu bar"]];
+const DIRS={
+  glass:{name:"Holo Glass HUD",sw:["#060B16","#7FDBFF","#EAF4FF","#5EF0B0"],type:"Exo 2 light for headings and spaced labels; SF for body",
+    pros:["Glass panels float over a lit backdrop; corner brackets frame each panel like a HUD","The 3D board sits in a soft blue light pool, so the keyboard reads as the hero"],
+    cons:["Blur behind text costs contrast when lighting is bright; needs an opaque fallback for Reduce Transparency","Translucency over a moving 3D model costs GPU on every frame"],verdict:"Striking, but fragile"},
+  inst:{name:"Instrument Panel",rec:true,sw:["#121315","#E9B65A","#EDE8DB","#6FD98A"],type:"Barlow Semi Condensed for engraved labels; JetBrains Mono for readouts; SF for body",
+    pros:["Every hardware fact has an instrument: link and wake as annunciator lights, 0–4 levels as tick scales, the packet bar as an LED strip","Opaque graphite panels keep text contrast high under any lighting","Amber is reserved for the accent; orange only ever means a resend or a warning"],
+    cons:["Uppercase labels need restraint to stay readable","Closest to a pro-tool look; less playful than the other two"],verdict:"Recommended"},
+  neon:{name:"Neon Line",sw:["#040406","#FF5BD6","#F3F3F7","#4FE3FF"],type:"Sora light for headings and values; SF for body",
+    pros:["Almost no chrome: hairlines and one glow on the active control","Lets the keyboard's own RGB be the loudest colour on screen"],
+    cons:["Magenta accent competes with the keyboard's lighting colours","Hairline-only grouping makes dense screens (Keys, Restore points) harder to scan"],verdict:"Clean, but the accent fights the LEDs"}
+};
+const INV=[
+  ["Onboard effects","18 effects in onboard order 1–18, saved on the keyboard and kept with the app closed. Each effect stores its own brightness 0–4, speed 0–4 and colour 0–7 (palette 1–7 or multicolour). Flash away, Ripples, Shadow and Reaction react to typing.","LightingBlock · byte 0x0a, 0x38+2e, 0x39+2e","ok"],
+  ["Speed direction","Speed is stored 0–4; whether 0 is slowest or fastest is not confirmed. Label it next to every speed control.","LightingBlock.speed","un"],
+  ["Palette","7 colours, each written to all 23 effect groups. Reset to factory: red, green, blue, yellow, magenta, cyan, white. 490-byte block: "+PK.palette+" packets over 2.4G.","Palette · cmd 09 / 0x49","ok"],
+  ["Side lights","Effect Off / Rainbow flow / Colour cycle / Solid / Breathing; colour 0–7 (Solid and Breathing only); brightness 0–4; speed 0–4 (the moving ones). Confirmed by eye with Fn + Right Shift.","LightingBlock.side* · 0x12–0x15","ok"],
+  ["Key remapping","Base and Fn layers, 67 physical keys. Targets: letters, digits, F1–F12, named keys, modifiers (left/right Ctrl, Shift, Option, Cmd), media (Mute, Volume ±, Play/Pause, Next, Previous, Stop, Brightness ±), disable. Fn and connection bindings are protected and need a confirmation. 504-byte layer: "+PK.layer+" packets over 2.4G.","KeyLayer · cmd 01 / 0x41 sub 0–1","ok"],
+  ["Live lighting","Streamed by the app at 20 fps; nothing is saved. Rest of keyboard: Off (saved lighting), Dark, Solid, Rainbow wave, Custom layout file, or one of 13 effect backgrounds. Per-key colours are pinned on top.","Engine · FrameRenderer, Backgrounds","ok"],
+  ["Live over 2.4G","Frames are at most 168 bytes (12 reports × 14). Pinned keys keep exact colours; the background is quantised or merged when it doesn't fit. Streams only while the onboard effect is Fixed. Over the cable every key is exact.","ReceiverProtocol.stream · maxReports 12","ok"],
+  ["Restore points","A restore point is written before every save. Back up now, import a CLI backup (.txt, same format), reveal the folder. Restore writes 4 blocks: "+(PK.lighting+PK.palette+2*PK.layer)+" packets over 2.4G, 4 reports over the cable.","BackupStore · Snapshot.records","ok"],
+  ["Verified saves","Backup → write → read back and compare. Two write attempts, then two verified rollback attempts. If rollback fails the app keeps the backup path and offers Restore backup.","safeSave · F65Error.verifyFailed","ok"],
+  ["Packet progress","2.4G: every packet is acknowledged; up to 5 attempts per packet, resends reported. Cable: one report per block.","ReceiverTransport.write · progress","ok"],
+  ["Connection","Automatic (prefer cable), USB cable only, 2.4G receiver only. Cable 258A:010C, receiver 3554:FA09. Awake check (07) every 5 s online, 2 s offline; a 0A status report triggers a lighting re-read.","HIDHub · DeviceService.tick","ok"],
+  ["Asleep / offline / permission","Asleep: 07 answers 0, nothing is written. Offline: no device. Permission: Input Monitoring denied, with a link to System Settings.","F65Error.asleep / notFound / notPermitted","ok"],
+  ["Battery","Byte from 0x4a over 2.4G; what it means is not confirmed. Show it only as \"unconfirmed\".","DeviceState.battery","un"],
+  ["App settings","Preview: 3D or flat (Flat lay, Glass, Outline), camera, colourway. Start at login via SMAppService (On / Off / Needs approval). Reduce Motion follows macOS. These never touch the keyboard.","DisplaySettingsView · AppDelegate","ok"],
+  ["Settings import/export","Import exists for restore points (.txt). There is no separate app-settings export; restore point files are the export.","AppModel.importPoint","ro"],
+  ["Macros","Macro memory is read and shown as raw bytes. Writes are blocked until the format is confirmed.","DeviceState.macroBytes","ro"],
+  ["Game mode, firmware, factory reset","Never sent. Only commands 01, 04 and 09 are written.","HANDOFF rules","out"]
+];
+const MOT=[
+  ["ack","120 ms · ease-out","Packet segment fills when its ack arrives; selection rings; segmented thumbs","Segment fills instantly"],
+  ["resend","120 ms · ease-out, orange","A resent packet's segment turns orange, then accent once acked","Colour change only, no fade"],
+  ["layer-in / layer-out","220 ms in · 150 ms out · ease-in-out","Crossfades: Base↔Fn legends overlay, panel swaps, online/offline chips","Instant swap"],
+  ["keycap-flip","340 ms · spring (response .34, damping .8)","3D ↔ Flat display switch; legends turning over on layer change","150 ms opacity crossfade"],
+  ["popover","200 ms open · 130 ms close","Menu-bar popover: scale .96→1 and fade, anchored at the status item","Fade only, same durations"],
+  ["wake-pulse","2.4 s loop · ease-in-out (1.2 s each way)","Wake prompt outline while 07 says the keyboard is asleep","Static outline at 50%"],
+  ["camera","700 ms · cubic in-out","3D camera preset changes (Three-quarter, Top, Front, Close-up)","Jump to the preset"],
+  ["keypress","50 ms down · 150 ms up","Keycap dip when a key is pressed or clicked in the 3D view","No dip; the cap lights only"],
+  ["preview-hover (proposed)","0 ms in · 150 ms out","Effect tile hover swaps the 3D preview without saving","Still frame of the hovered effect"],
+  ["row-insert (proposed)","220 ms · fade + 6 px rise","New restore point row appears at the top of the list","Fade only"],
+  ["live-mirror (proposed)","50 ms per frame (20 fps), no easing","3D preview mirrors the frames sent to the keyboard","Preview updates at 2 fps"]
+];
+
+// ===================================================================== icons (stand-ins for SF Symbols)
+const P={sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ wave:'<path d="M2 12h3l2.5-6 4 12 3-9 2 3H22"/>',kbd:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+ clock:'<path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v4h4M12 8v4l3 2"/>',lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+ refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/>',cable:'<path d="M9 3v4M15 3v4M6 7h12v4a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
+ rf:'<path d="M5 13a7 7 0 0 1 14 0M8.5 13a3.5 3.5 0 0 1 7 0"/><circle cx="12" cy="15.5" r="1.4"/>',moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 9v4M12 16h.01"/>',off:'<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',bat:'<rect x="3" y="8" width="16" height="8" rx="2"/><path d="M21 11v2"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',imp:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
+ warn:'<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17h.01"/>',typing:'<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 11h.01M11 11h.01M15 11h.01M8 14h8"/>',
+ pause:'<path d="M9 5v14M15 5v14"/>',win:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',power:'<path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/>',palette:'<circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16" cy="10" r="1.2"/>'};
+const I=(n,cls="")=>`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+
+// ===================================================================== 3D keyboard (from f65-keyboard-models)
+const L=(c)=>[c.toLowerCase(),1];
+const ROWS=[
+ [["esc",1],...[1,2,3,4,5,6,7,8,9,0].map(n=>["d"+n,1]),["minus",1],["equal",1],["bksp",2],["del",1]],
+ [["tab",1.5],..."QWERTYUIOP".split("").map(L),["lbr",1],["rbr",1],["bslash",1.5],["pgup",1]],
+ [["caps",1.75],..."ASDFGHJKL".split("").map(L),["semi",1],["quote",1],["enter",2.25],["pgdn",1]],
+ [["lshift",2.25],..."ZXCVBNM".split("").map(L),["comma",1],["period",1],["slash",1],["rshift",1.75],["up",1],["end",1]],
+ [["lctrl",1.25],["lwin",1.25],["lalt",1.25],["space",6.25],["fn",1.25],["rctrl",1.25],["gap",.5],["left",1],["down",1],["right",1]]];
+const KEYS=[];ROWS.forEach((r,y)=>{let x=0;r.forEach(([id,w])=>{if(id!=="gap")KEYS.push({id,w,x,y,cx:x+w/2,cy:y+.5});x+=w;});});
+KEYS.forEach((k,i)=>k.i=i);const BY={};KEYS.forEach(k=>BY[k.id]=k);
+const KEYCODE={Escape:"esc",Minus:"minus",Equal:"equal",Backspace:"bksp",Delete:"del",Tab:"tab",BracketLeft:"lbr",BracketRight:"rbr",Backslash:"bslash",PageUp:"pgup",CapsLock:"caps",Semicolon:"semi",Quote:"quote",Enter:"enter",PageDown:"pgdn",ShiftLeft:"lshift",Comma:"comma",Period:"period",Slash:"slash",ShiftRight:"rshift",ArrowUp:"up",End:"end",ControlLeft:"lctrl",MetaLeft:"lwin",AltLeft:"lalt",Space:"space",ControlRight:"rctrl",ArrowLeft:"left",ArrowDown:"down",ArrowRight:"right"};
+const DUAL={d1:["!","1"],d2:["@","2"],d3:["#","3"],d4:["$","4"],d5:["%","5"],d6:["^","6"],d7:["&","7"],d8:["*","8"],d9:["(","9"],d0:[")","0"],minus:["_","-"],equal:["+","="],lbr:["{","["],rbr:["}","]"],bslash:["|","\\"],semi:[":",";"],quote:['"',"'"],comma:["<",","],period:[">","."],slash:["?","/"]};
+const MODL={esc:"Esc",bksp:"← Backspace",del:"Delete",tab:"⇥ Tab",pgup:"PgUp",caps:"Caps Lock",enter:"↵ Enter",pgdn:"PgDn",lshift:"⇧ Shift",rshift:"⇧ Shift",end:"End",lctrl:"Ctrl",lwin:"Win",lalt:"Alt",fn:"Fn",rctrl:"Ctrl"};
+const ARW={up:"↑",down:"↓",left:"←",right:"→"};
+const ACC=new Set(["esc","enter","space","up","down","left","right"]);
+const MOD=new Set(["tab","caps","lshift","rshift","lctrl","lwin","lalt","fn","rctrl","bksp","del","pgup","pgdn","end"]);
+const role=id=>ACC.has(id)?"acc":MOD.has(id)?"mod":"alpha";
+const legendOf=id=>DUAL[id]?{kind:"dual",a:DUAL[id][0],b:DUAL[id][1]}:MODL[id]?{kind:"mod",a:MODL[id]}:ARW[id]?{kind:"arrow",a:ARW[id]}:id.length===1?{kind:"alpha",a:id.toUpperCase()}:{kind:"none"};
+const keyName=id=>id==="space"?"Space":DUAL[id]?DUAL[id][1]:MODL[id]?MODL[id].replace(/^[^A-Za-z]+\s/,""):ARW[id]?{up:"Up arrow",down:"Down arrow",left:"Left arrow",right:"Right arrow"}[id]:id.toUpperCase();
+const CWS={white:{case:"#ECECE9",alpha:"#F4F4F1",mod:"#BFCEDA",acc:"#141518",lgDark:"#07090C",lgLight:"#FFFFFF",plate:"#2A2C30"},
+  black:{case:"#151618",alpha:"#3E4044",mod:"#2E3034",acc:"#1E1F22",lgDark:"#07090C",lgLight:"#ECEFF3",plate:"#101113"}};
+const capCol=(cw,id)=>CWS[cw][role(id)];
+const lgCol=(cw,id)=>{const c=capCol(cw,id);const n=parseInt(c.slice(1),16);const l=(n>>16)*.3+((n>>8)&255)*.59+(n&255)*.11;return l>140?CWS[cw].lgDark:CWS[cw].lgLight;};
+const rnd=KEYS.map((_,i)=>{let x=Math.sin(i*12.9898)*43758.5453;return x-Math.floor(x);});
+const rnd2=KEYS.map((_,i)=>{let x=Math.sin(i*78.233+1)*12345.678;return x-Math.floor(x);});
+const snakeOrder=(()=>{const o=[];for(let y=0;y<5;y++){const row=KEYS.filter(k=>k.y===y).sort((a,b)=>a.x-b.x);if(y%2)row.reverse();o.push(...row);}const m={};o.forEach((k,i)=>m[k.id]=i);return m;})();
+const presses=[];
+function hsl(h){h=((h%360)+360)%360;const f=n=>{const k=(n+h/30)%12;return .55-.45*Math.max(-1,Math.min(k-3,9-k,1));};return [f(0)*255,f(8)*255,f(4)*255];}
+const SPD=[.35,.6,1,1.5,2.2],BRI=[0,.3,.55,.8,1];
+// Onboard-effect approximation. Returns [rgb, intensity] or null.
+function lightFor(eff,k,now,slot){
+  if(!eff)return null;
+  const T=now*SPD[slot.spd],b=BRI[slot.bri],multi=slot.col===7||[3,6,11].includes(eff);
+  let i=1,h=multi?k.cx*22+T*30:null;
+  const age=p=>now-p.t,dist=p=>Math.hypot(k.cx-p.x,(k.cy-p.y)*1.1);
+  switch(eff){
+    case 2:i=.5-.5*Math.cos(T*2);break;
+    case 3:h=k.cx*24-T*90;break;
+    case 4:i=0;for(const p of presses){const a=age(p),r=a*14;if(Math.abs(k.cy-p.y)<.6&&Math.abs(k.cx-p.x)<=r)i=Math.max(i,1-a/1.1);}break;
+    case 5:{const ph=(T*.5+rnd[k.i]*3)%3;i=Math.max(0,1-ph*1.6);if(multi)h=rnd2[k.i]*360+Math.floor(T*.5+rnd[k.i]*3)*97;break;}
+    case 6:h=Math.atan2(k.cy-2.5,(k.cx-8)/2)*57.3+T*120;break;
+    case 7:i=0;for(const p of presses){const a=age(p);i=Math.max(i,Math.max(0,1-Math.abs(dist(p)-a*9))*(1-a/1.6));}break;
+    case 8:i=Math.pow(Math.max(0,Math.sin(T*1.4+rnd[k.i]*6.28)),10);if(multi)h=rnd2[k.i]*360;break;
+    case 9:i=1;for(const p of presses){const a=age(p);i=Math.min(i,1-Math.max(0,1-dist(p)/1.6)*Math.max(0,1-a/1.2));}break;
+    case 10:{const n=KEYS.length,head=(T*9)%n,d=(head-snakeOrder[k.id]+n)%n;i=d<7?1-d/7:0;if(multi)h=snakeOrder[k.id]*8;break;}
+    case 11:h=T*45;break;
+    case 12:i=0;for(const p of presses){if(p.id===k.id)i=Math.max(i,1-age(p)/.9);}break;
+    case 13:i=.5+.5*Math.sin(k.cx*.7-T*3.2);break;
+    case 14:{const bar=8+8.2*Math.sin(T*1.6);i=Math.max(0,1-Math.abs(k.cx-bar)/1.6);break;}
+    case 15:{const a=Math.atan2(k.cy-2.5,(k.cx-8)/2.2);i=Math.pow(Math.max(0,Math.cos(2*(a-T*1.6))),3);break;}
+    case 16:h=multi?k.cy*55-T*130:null;i=.65+.35*Math.sin(k.cy*1.3-T*4);break;
+    case 17:{const d=Math.hypot((k.cx-8)/1.6,k.cy-2.5);if(multi)h=d*40-T*90;i=.55+.45*Math.sin(d*1.4-T*3);break;}
+    case 18:{const f=Math.floor(T*3),fr=T*3-f;let x=Math.sin((Math.floor(k.cx/3)*7+f*13)*12.9)*9999;x-=Math.floor(x);i=x>.72?Math.pow(1-fr,2)*.9+.1:.22;if(multi)h=220+x*60;break;}
+  }
+  i=Math.max(0,Math.min(1,i));
+  return [h==null?PAL[slot.col]:hsl(h),i*b];
+}
+function press(id){const k=BY[id];if(!k)return;const now=clock();presses.push({x:k.cx,y:k.cy,t:now,id});if(presses.length>30)presses.shift();VIEWS.forEach(v=>v.press(k.i));}
+let frozen=4.2;const clock=()=>S.rm?frozen:performance.now()/1000;
+
+const HAS3D=!!(window.THREE&&THREE.OrbitControls&&THREE.RoomEnvironment);
+const U=19.05;let T3,noiseTex,glowTex,legendTex={},geoCache={};
+if(HAS3D){T3=THREE;T3.ColorManagement.legacyMode=false;
+  const nc=document.createElement("canvas");nc.width=nc.height=256;const ng=nc.getContext("2d"),id=ng.createImageData(256,256);
+  for(let i=0;i<id.data.length;i+=4){const v=215+Math.random()*40;id.data[i]=id.data[i+1]=id.data[i+2]=v;id.data[i+3]=255;}
+  ng.putImageData(id,0,0);noiseTex=new T3.CanvasTexture(nc);noiseTex.wrapS=noiseTex.wrapT=T3.RepeatWrapping;
+  const gc=document.createElement("canvas");gc.width=gc.height=64;const gg=gc.getContext("2d"),rg=gg.createRadialGradient(32,32,2,32,32,32);
+  rg.addColorStop(0,"rgba(255,255,255,1)");rg.addColorStop(.5,"rgba(255,255,255,.5)");rg.addColorStop(1,"rgba(255,255,255,0)");gg.fillStyle=rg;gg.fillRect(0,0,64,64);glowTex=new T3.CanvasTexture(gc);}
+const ROWH=[9.4,8.1,7.5,8.3,8.3],SLOPE=[-.17,-.07,0,.07,.07];
+function contour(w,d,r,n){const pts=[],hw=w/2-r,hd=d/2-r;[[hw,-hd,-90],[hw,hd,0],[-hw,hd,90],[-hw,-hd,180]].forEach(([cx,cz,a0])=>{for(let i=0;i<=n;i++){const a=(a0+90*i/n)*Math.PI/180;pts.push([cx+r*Math.cos(a),cz+r*Math.sin(a)]);}});return pts;}
+function capGeo(w,row){const key=w+"_"+row;if(geoCache[key])return geoCache[key];
+  const bw=w*U-.95,bd=U-.95,tw=bw-5.3,td=bd-3.8,h=ROWH[row],s=SLOPE[row],dish=w>2.6?.18:.55,rb=1.1,rt=2.1,fr=1.15,N=5;
+  const topY=(x,z)=>h+s*z-dish*Math.max(0,1-Math.pow(2*x/tw,2));const rings=[];
+  const K=5;for(let i=0;i<=K;i++){const t=i/K,ww=bw+(tw+2*fr-bw)*t,dd=bd+(td+2*fr-bd)*t,r=rb+(rt+fr-rb)*t;rings.push(contour(ww,dd,r,N).map(([x,z])=>{const xt=x*tw/ww,zt=z*td/dd;return [x,t*(topY(xt,zt)-fr),z,xt,zt];}));}
+  const F=4;for(let j=1;j<=F;j++){const th=j/F*Math.PI/2,o=fr*Math.cos(th),ww=tw+2*o,dd=td+2*o;rings.push(contour(ww,dd,rt+o,N).map(([x,z])=>{const xt=x*tw/ww,zt=z*td/dd;return [x,topY(xt,zt)-fr*(1-Math.sin(th)),z,xt,zt];}));}
+  [.8,.6,.4,.2].forEach(c=>rings.push(contour(tw*c,td*c,rt*c,N).map(([x,z])=>[x,topY(x,z),z,x,z])));
+  const pos=[],uv=[],idx=[],Pn=rings[0].length;const pushV=(x,y,z,xt,zt)=>{pos.push(x,y,z);uv.push(Math.min(.996,Math.max(.004,xt/tw+.5)),Math.min(.996,Math.max(.004,.5-zt/td)));};
+  rings.forEach(r=>r.forEach(p=>pushV(...p)));
+  for(let r=0;r<rings.length-1;r++)for(let i=0;i<Pn;i++){const a=r*Pn+i,b=r*Pn+(i+1)%Pn,c=(r+1)*Pn+i,d=(r+1)*Pn+(i+1)%Pn;idx.push(a,c,b,b,c,d);}
+  const cIdx=pos.length/3;pushV(0,topY(0,0),0,0,0);const last=(rings.length-1)*Pn;for(let i=0;i<Pn;i++)idx.push(last+i,cIdx,last+(i+1)%Pn);
+  const g=new T3.BufferGeometry();g.setAttribute("position",new T3.Float32BufferAttribute(pos,3));g.setAttribute("uv",new T3.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();geoCache[key]={g,tw,td};return geoCache[key];}
+function drawLegend(cv,k,cw,tw,layer){const g=cv.getContext("2d"),px=cv.width/tw;g.fillStyle=capCol(cw,k.id);g.fillRect(0,0,cv.width,cv.height);
+  const Lg=legendOf(k.id);g.fillStyle=lgCol(cw,k.id);g.textBaseline="top";const pad=1.35*px;const F=(mm,wt=700)=>`${wt} ${mm*px}px "Barlow Semi Condensed",system-ui,sans-serif`;
+  if(Lg.kind==="alpha"){g.font=F(5.2);g.fillText(Lg.a,pad,pad*.75);}
+  else if(Lg.kind==="dual"){g.font=F(3.9);g.fillText(Lg.a,pad,pad*.6);g.fillText(Lg.b,pad,pad*.6+4.7*px);}
+  else if(Lg.kind==="mod"){let mm=3.2;g.font=F(mm);while(g.measureText(Lg.a).width>cv.width-pad*2&&mm>2){mm-=.1;g.font=F(mm);}g.textBaseline="middle";g.fillText(Lg.a,pad,cv.height*.42);}
+  else if(Lg.kind==="arrow"){g.font=F(5.6);g.textAlign="center";g.textBaseline="middle";g.fillText(Lg.a,cv.width/2,cv.height*.45);}}
+function getLegendTex(k,cw){const key=cw+"|"+k.id;if(legendTex[key])return legendTex[key];const {tw,td}=capGeo(k.w,k.y);
+  const px=Math.min(28,1000/tw),cv=document.createElement("canvas");cv.width=Math.round(tw*px);cv.height=Math.round(td*px);drawLegend(cv,k,cw,tw);
+  const t=new T3.CanvasTexture(cv);t.encoding=T3.sRGBEncoding;t.anisotropy=8;t.userData={cv,k,cw,tw};legendTex[key]=t;return t;}
+function redrawLegends(){Object.values(legendTex).forEach(t=>{const u=t.userData;drawLegend(u.cv,u.k,u.cw,u.tw);t.needsUpdate=true;});}
+function rrShape(w,h,r){const s=new T3.Shape(),x=-w/2,y=-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;}
+function buildBoard(cw){const grp=new T3.Group(),C=CWS[cw];
+  const caseMat=new T3.MeshPhysicalMaterial({color:C.case,roughness:.42,clearcoat:.15,clearcoatRoughness:.5});
+  const B=1.3,outer=rrShape(325-2*B,115.6-2*B,6.5);outer.holes.push(rrShape(16*U+2+2*B,5*U+2+2*B,1.6));
+  const top=new T3.ExtrudeGeometry(outer,{depth:18.6-5.8-2*B,bevelEnabled:true,bevelThickness:B,bevelSize:B,bevelSegments:5,curveSegments:14});top.rotateX(-Math.PI/2);top.translate(0,5.8+B,0);
+  const topM=new T3.Mesh(top,caseMat);topM.castShadow=topM.receiveShadow=true;grp.add(topM);
+  const bot=new T3.ExtrudeGeometry(rrShape(325-2.4,115.6-2.4,6.2),{depth:4.2,bevelEnabled:true,bevelThickness:.5,bevelSize:.5,bevelSegments:3,curveSegments:14});bot.rotateX(-Math.PI/2);bot.translate(0,.5,0);grp.add(new T3.Mesh(bot,caseMat));
+  const fill=new T3.Mesh(new T3.BoxGeometry(16*U+2,6,5*U+2),caseMat);fill.position.y=7;grp.add(fill);
+  const plateMat=new T3.MeshStandardMaterial({color:C.plate,roughness:.7});const plate=new T3.Mesh(new T3.BoxGeometry(16*U+1.6,1.2,5*U+1.6),plateMat);plate.position.y=10.1;plate.receiveShadow=true;grp.add(plate);
+  const swMat=new T3.MeshPhysicalMaterial({color:C.case,roughness:.5});[[-108,13,3.2],[-64,5,2.6]].forEach(([x,w,hh])=>{const m=new T3.Mesh(new T3.BoxGeometry(w,hh,2.4),swMat);m.position.set(x,13.5,-115.6/2-.9);grp.add(m);});
+  const housing=new T3.BoxGeometry(14,5,14),housingMat=new T3.MeshStandardMaterial({color:"#1B1C1F",roughness:.5});
+  const caps=[],glows=[],mats=[];
+  KEYS.forEach(k=>{const x=(k.x+k.w/2-8)*U,z=(k.y+.5-2.5)*U;const hs=new T3.Mesh(housing,housingMat);hs.position.set(x,13.2,z);grp.add(hs);
+    const {g}=capGeo(k.w,k.y);const m=new T3.MeshPhysicalMaterial({map:getLegendTex(k,cw),roughness:.62,roughnessMap:noiseTex,bumpMap:noiseTex,bumpScale:.012,sheen:.08,sheenRoughness:.8,sheenColor:new T3.Color("#ffffff"),envMapIntensity:role(k.id)==="alpha"?1:.6});
+    const cap=new T3.Mesh(g,m);cap.position.set(x,14.6,z);cap.castShadow=cap.receiveShadow=true;cap.userData.i=k.i;grp.add(cap);caps.push(cap);mats.push(m);
+    const gm=new T3.MeshBasicMaterial({map:glowTex,transparent:true,blending:T3.AdditiveBlending,depthWrite:false,toneMapped:false,color:0});
+    const gl=new T3.Mesh(new T3.PlaneGeometry(k.w*U+17,U+17),gm);gl.rotation.x=-Math.PI/2;gl.position.set(x,12.4,z);grp.add(gl);glows.push(gm);
+    const gm2=new T3.MeshBasicMaterial({map:glowTex,transparent:true,blending:T3.AdditiveBlending,depthWrite:false,toneMapped:false,color:0});
+    const gl2=new T3.Mesh(new T3.PlaneGeometry(k.w*U+6,U+6),gm2);gl2.rotation.x=-Math.PI/2;gl2.position.set(x,14.4,z);grp.add(gl2);gm.userData.inner=gm2;});
+  grp.rotation.x=.055;grp.position.y=3.3;
+  return {grp,caps,glows,mats,setCW(n){const C=CWS[n];caseMat.color.set(C.case);swMat.color.set(C.case);plateMat.color.set(C.plate);mats.forEach((m,i)=>{m.map=getLegendTex(KEYS[i],n);m.needsUpdate=true;});}};}
+const PRESETS={three:{dir:[-.45,.58,.68],target:[0,12,4],fit:1.42},top:{dir:[0,1,.0001],target:[0,14,0],fit:1.12},front:{dir:[0,.24,.97],target:[0,12,0],fit:1.22},close:{dir:[-.62,.42,.66],target:[-92,18,6],fit:.62}};
+let VIEWS=[];
+function make3D(el,o){
+  let renderer;try{renderer=new T3.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"});}catch(e){el.classList.add("fail");el.textContent="3D needs WebGL, which this browser has turned off.";return null;}
+  const dark=o.cw==="black";
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));renderer.outputEncoding=T3.sRGBEncoding;renderer.toneMapping=T3.ACESFilmicToneMapping;renderer.toneMappingExposure=dark?.95:.92;
+  renderer.physicallyCorrectLights=true;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T3.PCFSoftShadowMap;el.appendChild(renderer.domElement);
+  const scene=new T3.Scene();const pm=new T3.PMREMGenerator(renderer);scene.environment=pm.fromScene(new T3.RoomEnvironment(),.04).texture;
+  const key=new T3.DirectionalLight(0xffffff,dark?1.6:2.2);key.position.set(-170,380,240);key.castShadow=true;key.shadow.mapSize.set(1536,1536);
+  Object.assign(key.shadow.camera,{left:-240,right:240,top:180,bottom:-180,near:50,far:1200});key.shadow.bias=-.0003;key.shadow.normalBias=.4;scene.add(key);
+  const fillL=new T3.DirectionalLight(0xb8c8ff,.45);fillL.position.set(260,160,-120);scene.add(fillL);
+  const ground=new T3.Mesh(new T3.PlaneGeometry(2400,2400),new T3.ShadowMaterial({opacity:.55}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  let cw=o.cw;const kb=buildBoard(cw);scene.add(kb.grp);
+  const cam=new T3.PerspectiveCamera(o.fov||28,2,10,6000);let controls=null;
+  if(o.orbit){controls=new T3.OrbitControls(cam,renderer.domElement);Object.assign(controls,{enableDamping:!S.rm,dampingFactor:.08,enablePan:false,enableZoom:false,minPolarAngle:0,maxPolarAngle:1.45});renderer.domElement.style.touchAction="pan-y";}
+  const target=new T3.Vector3(),dir=new T3.Vector3();let preset=o.view||"three",dist=500,tween=null;
+  function distFor(p){const w=el.clientWidth,h=el.clientHeight,t=Math.tan(cam.fov*Math.PI/360),asp=w/h;const halfW=p==="front"?172:178,halfH=p==="top"?68:p==="front"?42:92;return Math.max(halfW/(t*asp),halfH/t)*PRESETS[p].fit*(o.fitMul||1);}
+  function place(){cam.position.copy(target).addScaledVector(dir,dist);cam.lookAt(target);if(controls){controls.target.copy(target);controls.update();}}
+  function goTo(p,animate){preset=p;const Pp=PRESETS[p];const nt=new T3.Vector3(...Pp.target),nd=new T3.Vector3(...Pp.dir).normalize(),ndist=distFor(p);
+    if(!animate||S.rm){target.copy(nt);dir.copy(nd);dist=ndist;place();return;}
+    tween={st:{t:target.clone(),d:cam.position.clone().sub(target).normalize(),dist:cam.position.distanceTo(target)},nt,nd,ndist,t0:performance.now()};}
+  function resize(){const w=el.clientWidth,h=el.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();dist=distFor(preset);
+    if(!dir.lengthSq())goTo(preset,false);else{if(controls)dir.copy(cam.position).sub(controls.target).normalize();place();}v.dirty=true;}
+  const ray=new T3.Raycaster(),mv=new T3.Vector2();let down=null;
+  renderer.domElement.addEventListener("pointerdown",e=>down=[e.clientX,e.clientY]);
+  renderer.domElement.addEventListener("pointerup",e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>4)return;const r=renderer.domElement.getBoundingClientRect();
+    mv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mv,cam);const hit=ray.intersectObjects(kb.caps,false)[0];
+    if(hit){const id=KEYS[hit.object.userData.i].id;if(o.onPick)o.onPick(id);else press(id);}});
+  if(controls)controls.addEventListener("change",()=>v.dirty=true);
+  const pressT=new Float64Array(KEYS.length).fill(-99);
+  const ro=new ResizeObserver(resize);ro.observe(el);
+  const v={el,o,effect:o.effect||0,slot:o.slot||{bri:4,spd:2,col:7},override:o.override||null,glow:1,dirty:true,
+    press(i){pressT[i]=performance.now()/1000;v.dirty=true;},
+    setCW(n){if(n===cw)return;cw=n;kb.setCW(n);v.dirty=true;},setView(p){goTo(p,true);v.dirty=true;},
+    destroy(){ro.disconnect();renderer.dispose();renderer.forceContextLoss();el.innerHTML="";},
+    frame(ms){if(!el.isConnected||!el.offsetParent)return;const now=clock(),rt=ms/1000;
+      const live=(!S.rm&&(v.effect||v.override))||tween||(controls&&controls.enableDamping)||pressT.some(t=>rt-t<.3);
+      if(!live&&!v.dirty)return;v.dirty=false;
+      if(tween){const k=Math.min(1,(ms-tween.t0)/700),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;target.lerpVectors(tween.st.t,tween.nt,e);dir.copy(tween.st.d).lerp(tween.nd,e).normalize();dist=tween.st.dist+(tween.ndist-tween.st.dist)*e;place();if(k>=1)tween=null;}
+      for(let i=0;i<KEYS.length;i++){const k=KEYS[i];let c=null,a=0;
+        const ov=v.override&&v.override(k,now);
+        if(ov){c=ov[0];a=ov[1];}else{const r=lightFor(v.effect,k,now,v.slot);if(r){c=r[0];a=r[1];}}
+        const G=kb.glows[i];a*=v.glow;
+        if(c&&a>0)G.color.setRGB(c[0]/255,c[1]/255,c[2]/255).convertSRGBToLinear().multiplyScalar(a*(dark?6.5:4.6));else G.color.setRGB(0,0,0);
+        G.userData.inner.color.copy(G.color).multiplyScalar(.55);
+        kb.mats[i].emissive.copy(G.color).multiplyScalar(role(k.id)==="acc"?.01:(dark?.022:.03));
+        const dt=rt-pressT[i],f=S.rm||dt<0?0:dt<.05?dt/.05:Math.max(0,1-(dt-.05)/.15);kb.caps[i].position.y=14.6-3.8*f;}
+      if(controls&&!tween)controls.update();renderer.render(scene,cam);}};
+  VIEWS.push(v);return v;
+}
+function loop(ms){VIEWS.forEach(v=>v.frame(ms));requestAnimationFrame(loop);}
+if(HAS3D)requestAnimationFrame(loop);
+document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("select,input,textarea,button"))return;const id=KEYCODE[e.code]||(e.code.startsWith("Key")?e.code.slice(3).toLowerCase():e.code.startsWith("Digit")?"d"+e.code.slice(5):null);if(id&&BY[id])press(id);});
+
+// ===================================================================== live / keys overrides
+function liveOverride(k,now){const L=S.live;const bri=L.bri/100;
+  if(L.pinned.includes(k.id))return [[255,0,0],bri];
+  if(L.mode==="solid")return [[160,0,255],bri];
+  if(L.mode==="wave")return [hsl(((k.cx/16)-now*(S.conn==="rf"?.5:.25))*360),bri];
+  if(L.mode==="custom")return [[16,0,32],bri];
+  if(L.mode==="dark")return [[0,0,0],0];
+  if(L.mode==="effect"){const r=lightFor(L.bg,k,now,{bri:4,spd:L.spd,col:L.multi?7:6});return r?[r[0],r[1]*bri]:null;}
+  return null;}
+function keysOverride(k){if(k.id===S.sel)return [[255,190,90],1];if(k.id==="fn")return [[255,140,60],.35];return [[120,130,150],.12];}
+
+// ===================================================================== small builders
+const seg=(g,opts,cur,cls="")=>`<div class="seg ${cls}" role="group" data-g="${g}">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${String(v)===String(cur)}">${t}</button>`).join("")}</div>`;
+const lv=(g,cur)=>`<div class="col">${seg(g,[0,1,2,3,4].map(n=>[n,n]),cur)}<div class="ticks"><span>min</span><span>max</span></div></div>`;
+const swatches=(g,cur,dis)=>`<div class="sws" data-g="${g}">${PAL.map((c,i)=>`<button class="swb" data-v="${i}" style="background:${hexOf(c)}" aria-label="Palette colour ${i+1}" aria-pressed="${cur===i}" ${dis?"disabled":""}></button>`).join("")}<button class="swb multi" data-v="7" aria-label="Multicolour" aria-pressed="${cur===7}" ${dis?"disabled":""}></button></div>`;
+const canWrite=()=>CONN[S.conn].write;
+
+function chipsHTML(){return CONN[S.conn].chips.map(([cls,t,ic])=>`<span class="chip ${cls}">${ic?I(ic):'<i class="dot"></i>'}${t}</span>`).join("")+`<button class="tbtn" aria-label="Read keyboard settings">${I("refresh")}</button>`;}
+function sideHTML(cur){const items=[["lighting","sun","Lighting"],["live","wave","Live lighting"],["keys","kbd","Keys"],["restore","clock","Restore points"],["macros","lock","Macros"],["settings","gear","Settings"]];
+  const map={hero:"lighting",saving:"lighting",conn:""};const act=map[cur]||cur;
+  return `<div class="grp">Keyboard</div>`+items.map(([k,ic,t])=>`<button class="navi ${k==="macros"?"dim":""}" data-nav="${k}" ${k===act?'aria-current="page"':""}>${I(ic)}<span>${t}</span>${k==="macros"?'<span class="badge">Read only</span>':""}</button>`).join("")+
+  `<div class="foot">F65 Lighting<br>Settings stay on your keyboard.</div>`;}
+function bannerHTML(){
+  if(S.conn==="asleep")return `<div class="banner wake ${S.rm?"":"pulse"}">${I("typing")}<div class="grow"><b>Press any key on the F65 to wake it.</b> Settings load as soon as it answers. Nothing is saved while it sleeps.</div></div>`;
+  if(S.conn==="offline")return `<div class="banner">${I("off")}<div class="grow"><b>AULA F65 not connected.</b> Plug in the USB cable or the 2.4G receiver. The app keeps looking every 2 seconds.</div></div>`;
+  if(S.conn==="noperm")return `<div class="banner err">${I("shield")}<div class="grow"><b>Needs Input Monitoring permission.</b> macOS blocks access to the keyboard until F65 Lighting is allowed.</div><button class="btn pri">Open System Settings</button></div>`;
+  return "";}
+const wellState=()=>S.conn==="asleep"?"dimmed":(S.conn==="offline"||S.conn==="noperm")?"ghost":"";
+
+// ===================================================================== screens
+function hero(){const e=S.onboard,sl=S.slots[e];
+  return `<div class="whead"><h2>Lighting</h2><span class="s">Saved on the keyboard. Works with the app closed.</span></div>${bannerHTML()}
+  <div class="hero">
+    <div class="well ${wellState()}"><div class="wcap"><span class="lbl">Grey White</span><span class="ex">Sample state</span></div><div class="kb" data-kb data-cw="white" data-role="onboard" data-orbit="1"></div></div>
+    <div class="stack">
+      <div class="well ${wellState()}"><div class="wcap"><span class="lbl">Black Grey</span></div><div class="kb" data-kb data-cw="black" data-role="onboard" data-fit=".95"></div></div>
+      <div class="gauges">
+        <div class="gauge"><span class="lbl">Onboard effect</span><span class="v">${ENAME[e-1]}</span><span class="hint">${String(e).padStart(2,"0")} of 18</span></div>
+        <div class="gauge"><span class="lbl">Brightness</span><span class="v">${sl.bri} / 4</span><div class="bars">${[1,2,3,4].map(n=>`<i class="${n<=sl.bri?"on":""}"></i>`).join("")}</div></div>
+        <div class="gauge"><span class="lbl">Speed</span><span class="v">${sl.spd} / 4</span><span class="unconf">${I("warn")} direction unconfirmed</span></div>
+        <div class="gauge"><span class="lbl">Colour</span><span class="v">${sl.col===7?"Multicolour":"Palette "+(sl.col+1)}</span><span class="hint">from the 7-colour palette</span></div>
+      </div>
+    </div>
+  </div>`;}
+function lighting(saving){const e=S.onboard,sl=S.slots[e],sd=S.side,dis=!canWrite();
+  return `<div class="whead"><h2>Lighting</h2><span class="s">Saved on the keyboard. Works with the app closed.</span><div class="r"><span class="hint">Hover an effect to preview without saving</span></div></div>${bannerHTML()}
+  <div class="g-light">
+    <div class="col" style="gap:12px">
+      <div class="well ${wellState()}" style="height:282px"><div class="wcap"><span class="lbl" id="pvLbl">${ENAME[e-1]}</span><span class="hint" id="pvHint"></span></div><div class="kb" data-kb data-cw="global" data-role="onboard" data-orbit="1" data-fit=".9"></div></div>
+      <div class="fx" data-g="effect">${ENAME.map((n,i)=>`<button class="fxb" data-v="${i+1}" aria-pressed="${i+1===e}" ${dis?"disabled":""}><span class="n">${String(i+1).padStart(2,"0")}</span><span class="t">${n}</span>${REACTIVE.includes(i+1)?`<span class="k" title="Reacts to typing">${I("typing")}</span>`:""}${saving&&i+1===e?'<span class="spin" aria-label="Saving"></span>':""}</button>`).join("")}</div>
+      <div class="hint">${I("typing","").replace('class=""','style="width:12px;height:12px;vertical-align:-2px"')} reacts to typing (preview: click keycaps or type). Previews are approximate.</div>
+    </div>
+    <div class="insp">
+      <div class="panel"><div class="row" style="justify-content:space-between"><span class="ttl">${ENAME[e-1]}</span><span class="readout">FX ${String(e).padStart(2,"0")}</span></div>
+        <div class="col"><span class="lbl">Brightness</span>${lv("bri",sl.bri)}</div>
+        <div class="col"><div class="row" style="justify-content:space-between"><span class="lbl">Speed</span><span class="unconf">${I("warn").replace("<svg",'<svg style="width:11px;height:11px"')} direction unconfirmed</span></div>${lv("spd",sl.spd)}</div>
+        <div class="col"><span class="lbl">Colour</span>${swatches("col",sl.col,dis)}<button class="btn" style="align-self:flex-start">${I("palette")}Edit palette…</button></div>
+      </div>
+      <div class="panel"><div class="row" style="justify-content:space-between"><span class="lbl">Side lights</span><span class="hint">Fn + Right Shift</span></div>
+        <select class="sel" data-g="sideE" aria-label="Side light effect">${SIDE_FX.map((n,i)=>`<option value="${i}" ${i===sd.e?"selected":""}>${n}</option>`).join("")}</select>
+        <div class="col"><span class="lbl">Colour ${[3,4].includes(sd.e)?"":"· Solid and Breathing only"}</span>${swatches("sideC",sd.c,![3,4].includes(sd.e))}</div>
+        <div class="row"><div class="col"><span class="lbl">Brightness</span>${seg("sideB",[0,1,2,3,4].map(n=>[n,n]),sd.b)}</div></div>
+      </div>
+    </div>
+  </div>`;}
+function live(){const L=S.live,rf=S.conn==="rf",needFixed=rf&&S.onboard!==1;
+  const bgOpts=BG_AVAIL.map(n=>`<option value="${n}" ${n===L.bg?"selected":""}>${ENAME[n-1]}</option>`).join("");
+  return `<div class="whead"><h2>Live lighting</h2><span class="s">Streamed by this app. Nothing is saved on the keyboard; saved lighting returns when streaming stops.</span></div>${bannerHTML()}
+  ${needFixed&&canWrite()?`<div class="banner warn">${I("warn")}<div class="grow"><b>Over 2.4G, live lighting streams only while the onboard effect is Fixed.</b> The onboard effect is ${ENAME[S.onboard-1]}. The cable has no such limit.</div><button class="btn pri" data-act="fixed">Set onboard effect to Fixed</button></div>`:""}
+  <div class="g-light">
+    <div class="col" style="gap:12px">
+      <div class="well ${wellState()}" style="height:300px"><div class="wcap"><span class="lbl">Live preview</span><span class="ex">${needFixed?"what will stream":"mirrors sent frames"}</span></div><div class="wcap2"><span class="chip ${needFixed?"warn":"ok"}"><i class="dot"></i>${needFixed?"Not streaming":"Streaming · 20 fps"}</span></div><div class="kb" data-kb data-cw="global" data-role="live" data-orbit="1" data-fit=".9"></div></div>
+      <div class="panel"><div class="row" style="justify-content:space-between"><span class="lbl">Key colours</span><button class="btn" data-act="clearKeys">Clear key colours</button></div>
+        <span class="hint">Click keys on the keyboard to select them; click again to deselect. Their colour stays on top of the rest of the keyboard.</span>
+        <div class="kchips">${L.pinned.length?L.pinned.map(id=>`<span class="kchip"><i style="background:#ff0000"></i>${keyName(id)} · #FF0000</span>`).join(""):'<span class="hint">No keys selected.</span>'}</div>
+      </div>
+    </div>
+    <div class="insp">
+      <div class="panel"><span class="lbl">Rest of keyboard</span>
+        <select class="sel" data-g="liveMode" aria-label="Rest of keyboard">${[["off","Off (show saved lighting)"],["dark","Dark"],["solid","Solid colour"],["wave","Rainbow wave"],["custom","Custom layout file"],["effect","Effect"]].map(([v,t])=>`<option value="${v}" ${v===L.mode?"selected":""}>${t}</option>`).join("")}</select>
+        ${L.mode==="effect"?`<div class="col"><span class="lbl">Effect background</span><select class="sel" data-g="liveBg">${bgOpts}</select><span class="hint">13 of 18 can be drawn by the app. Flash away, Ripples, Shadow and Reaction need keypresses and aren't available.</span></div>
+        <div class="col"><span class="lbl">Speed</span>${seg("liveSpd",[0,1,2,3,4].map(n=>[n,n]),L.spd)}</div>
+        <div class="row" style="justify-content:space-between"><span>Multicolour</span><span class="switch ${L.multi?"":"off"}" data-act="multi" role="switch" aria-checked="${L.multi}"></span></div>`:""}
+        <div class="col"><div class="row" style="justify-content:space-between"><span class="lbl">Brightness</span><span class="readout">${L.bri}%</span></div><input type="range" id="liveBri" min="0" max="100" value="${L.bri}" style="accent-color:var(--acc)"></div>
+      </div>
+      <div class="panel"><span class="lbl">Link budget</span>
+        ${S.conn==="cable"?`<span>Cable: every key gets its exact colour each frame.</span><div class="capbar"><i class="p" style="width:100%"></i></div>`:
+        `<span>2.4G: up to 168 bytes per frame (12 reports × 14 bytes).</span><div class="capbar"><i class="p" style="width:${Math.round((4+L.pinned.length)/168*100)}%"></i><i style="width:${Math.round((168-4-L.pinned.length)/168*100)}%;opacity:.55"></i></div>
+        <span class="hint"><b style="color:var(--ok)">Pinned keys</b> always keep exact colours. The <b style="color:var(--acc)">background</b> is simplified (fewer colour steps, small groups merged) when a frame doesn't fit.</span>`}
+      </div>
+    </div>
+  </div>`;}
+function keys(){const id=S.sel,slot=SLOTOF[id],prot=id==="fn",fnL=S.layer==="fn";
+  return `<div class="whead"><h2>Keys</h2><span class="s">Remap what each key sends. Physical positions stay the same.</span><div class="r">${seg("layer",[["base","Base"],["fn","Fn layer"]],S.layer,"w")}</div></div>${bannerHTML()}
+  <div class="kgrid">
+    <div class="col" style="gap:10px"><div class="well ${wellState()}" style="height:330px"><div class="wcap"><span class="lbl">${fnL?"Fn layer":"Base layer"}</span><span class="hint">Click a key to inspect it</span></div><div class="kb" data-kb data-cw="global" data-role="keys" data-view="top" data-fit=".98"></div></div>
+      <div class="hint">Selected key glows amber. Fn and connection bindings are marked; empty bindings dim.</div></div>
+    <div class="insp">
+      <div class="panel"><div class="row" style="justify-content:space-between"><span class="ttl">${keyName(id)}</span><span class="readout">SLOT ${slot}</span></div>
+        <dl class="kv"><dt>Layer</dt><dd>${fnL?"Fn layer (0x41 sub 1)":"Base (0x41 sub 0)"}</dd><dt>Sends now</dt><dd>${prot?"Fn (protected)":fnL?"<span class=\"ex\">Read from keyboard</span>":keyName(id)} ${prot?"":'<span class="ex">Example</span>'}</dd></dl>
+        ${prot?`<div class="lock">${I("lock")}<span>Protected Fn / connection binding. Replacing it asks for confirmation and backs up the original first.</span></div>`:""}
+        <div class="col"><span class="lbl">Send instead</span><select class="sel" aria-label="Send instead">
+          <optgroup label="Letters and digits"><option>A–Z, 0–9</option></optgroup><optgroup label="Function keys"><option>F1–F12</option></optgroup>
+          <optgroup label="Named keys"><option>Esc</option><option>Tab</option><option>Caps Lock</option><option>Delete</option><option>Home</option><option>End</option><option>Page Up</option><option>Page Down</option><option>Insert</option><option>Print Screen</option><option>Arrows</option></optgroup>
+          <optgroup label="Modifiers"><option>Left/Right Control</option><option>Left/Right Shift</option><option>Left/Right Option</option><option>Left/Right Command</option></optgroup>
+          <optgroup label="Media"><option>Mute</option><option>Volume +</option><option>Volume −</option><option>Play/Pause</option><option>Next</option><option>Previous</option><option>Stop</option><option>Brightness +</option><option>Brightness −</option></optgroup>
+          <optgroup label="Other"><option>Disable key</option></optgroup></select></div>
+        <div class="row"><button class="btn pri" ${canWrite()?"":"disabled"}>Remap key</button><button class="btn" ${canWrite()?"":"disabled"}>Disable key</button><button class="btn" ${canWrite()?"":"disabled"}>Restore this key</button></div>
+        <span class="hint">Saving writes the ${fnL?"Fn":"Base"} layer: 504 bytes, ${PK.layer} packets over 2.4G or one report over the cable.</span>
+      </div>
+    </div>
+  </div>`;}
+function restore(){const rows=[["f65-20261117-194654-218-3fa1c90b.txt","17 Nov 2026, 19:46:54"],["f65-20261117-191203-047-be22a417.txt","17 Nov 2026, 19:12:03"],["f65-20261116-221530-930-07c1d5e2.txt","16 Nov 2026, 22:15:30"],["f65-20261116-180845-011-91aa4c6d.txt","16 Nov 2026, 18:08:45"]];
+  return `<div class="whead"><h2>Restore points</h2><span class="s">Every save creates a restore point first. Imported CLI backups use the same format.</span></div>${bannerHTML()}
+  <div class="row"><button class="btn pri" ${canWrite()?"":"disabled"}>${I("plus")}Back up now</button><button class="btn">${I("imp")}Import…</button><button class="btn">${I("folder")}Reveal folder</button><span class="ex" style="margin-left:auto">Example rows · real file-name format</span></div>
+  <div class="panel"><div class="rlist"><div class="rrow h"><span>File</span><span>Saved</span><span>Contains</span><span></span></div>
+    ${rows.map(([f,d])=>`<div class="rrow"><span class="fn">${f}</span><span>${d}</span><span>Lighting, Base, Fn, Palette</span><button class="btn" ${canWrite()?"":"disabled"}>Restore…</button></div>`).join("")}</div>
+    <span class="hint">A restore writes 4 blocks: ${PK.lighting+PK.palette+2*PK.layer} packets over 2.4G (${PK.lighting} lighting + ${PK.layer} + ${PK.layer} key layers + ${PK.palette} palette), or 4 reports over the cable. ${S.conn==="rf"?"<b>Use the USB cable for large restores when possible.</b>":""}</span></div>
+  <div class="col" style="gap:8px"><span class="lbl">When a save can't be verified</span>
+    <div class="banner warn">${I("check")}<div class="grow"><b>Rolled back:</b> the keyboard is as it was before. Nothing was changed.</div></div>
+    <div class="banner err">${I("warn")}<div class="grow"><b>ROLLBACK FAILED.</b> Restore <span class="mono">f65-20261117-194654-218-3fa1c90b.txt</span>, ideally over the USB cable.</div><button class="btn pri">Restore backup</button></div></div>`;}
+function connScreen(){const st=[["cable","cable","Cable","USB cable · 258A:010C","Online. Saves are one report per block."],["rf","rf","2.4G","2.4G · 3554:FA09","Online. Every packet is acknowledged."],["asleep","moon","Asleep","07 answers 0","Wake prompt pulses. Nothing is written."],["offline","off","Offline","No device","Keeps looking every 2 s."],["noperm","shield","No permission","Input Monitoring","Links to System Settings."]];
+  return `<div class="whead"><h2>Connection</h2><span class="s">How the app shows link and wake state. Pick a state; the toolbar, banner and keyboard follow.</span></div>
+  <div class="cstates" data-g="conn">${st.map(([k,ic,t,c,m])=>`<button class="cs" data-v="${k}" aria-pressed="${k===S.conn}">${I(ic)}<span class="t">${t}</span><span class="mono" style="font-size:11px">${c}</span><span class="m">${m}</span></button>`).join("")}</div>
+  ${bannerHTML()||`<div class="banner">${I(S.conn==="cable"?"cable":"rf")}<div class="grow"><b>${S.conn==="cable"?"Connected by USB cable.":"Connected through the 2.4G receiver."}</b> ${S.conn==="cable"?"Live lighting is exact per key. Preferred for large restores.":"Battery is shown, but what the value means is unconfirmed."}</div></div>`}
+  <div class="well ${wellState()}" style="height:300px"><div class="wcap"><span class="lbl">Keyboard</span></div><div class="kb" data-kb data-cw="global" data-role="onboard" data-fit=".95"></div></div>
+  <div class="row"><span class="lbl">Connection preference</span>${seg("pref",[["auto","Automatic (prefer cable)"],["cable","USB cable only"],["receiver","2.4G receiver only"]],S.pref,"w")}</div>`;}
+function settings(){return `<div class="whead"><h2>Settings</h2><span class="s">These options change the app preview. They don't change keyboard settings.</span></div>
+  <div class="g-light"><div class="col" style="gap:14px"><div class="well" style="height:260px"><div class="kb" data-kb data-cw="global" data-role="onboard" data-view="${S.camera}" data-fit=".95"></div></div>
+  <div class="panel"><div class="form">
+    <span class="k">Display</span>${seg("display",[["3d","3D model"],["flat","Flat"]],S.display,"w")}
+    ${S.display==="flat"?`<span class="k">Flat style</span>${seg("flat",[["lay","Flat lay"],["glass","Glass"],["out","Outline"]],"lay","w")}`:`<span class="k">Camera</span>${seg("camera",[["three","Three-quarter"],["top","Top"],["front","Front"],["close","Close-up"]],S.camera,"w")}`}
+    ${S.display==="flat"?`<span></span><span class="hint">The flat board isn't drawn on this design board; the app already ships all three flat styles.</span>`:""}
+    <span class="k">Colourway</span>${seg("cw",[["white","Grey White"],["black","Black Grey"]],S.cw,"w")}
+  </div></div></div>
+  <div class="insp"><div class="panel"><div class="form" style="grid-template-columns:1fr auto">
+    <span>Start at login</span><span class="row"><span class="hint">${{on:"On",off:"Off",approval:"Needs approval"}[S.login]}</span><button class="btn" data-act="login">${S.login==="on"?"Turn off":"Configure…"}</button></span>
+    <span>Open window at login</span><span class="hint">Menu bar only</span>
+  </div></div>
+  <div class="panel"><span class="lbl">Motion</span><span>Reduce Motion follows macOS.</span><span class="hint">System Settings › Accessibility › Display. When on, previews hold still frames and the wake prompt stops pulsing. The keyboard's own lighting is unaffected.</span></div>
+  <div class="panel"><span class="lbl">Unconfirmed</span><span class="hint">Speed direction and battery meaning are unconfirmed. Onboard effect previews are approximations.</span></div></div></div>`;}
+function menu(){const md=S.live.mode;return `<div class="desk"><div class="mbar"><b>F65 Lighting</b><span>File</span><span>Edit</span><span>View</span><span>Window</span><div class="r"><span class="si" aria-label="F65 menu bar item">${I("kbd")}</span><span>${I("bat")}</span><span>Wed 18 Nov 09:41</span></div></div>
+  <div class="pop" id="pop" role="dialog" aria-label="F65 menu bar popover">
+    <div class="hd">${I("kbd").replace("<svg",'<svg style="width:18px;height:18px;color:var(--acc)"')}<b>AULA F65</b><span style="margin-left:auto" class="chip ${S.conn==="rf"||S.conn==="cable"?"ok":S.conn==="asleep"?"warn":""}"><i class="dot"></i>${CONN[S.conn].t}</span></div>
+    ${S.conn==="asleep"?`<div class="banner wake ${S.rm?"":"pulse"}" style="padding:8px 10px;font-size:12px">${I("typing")}Press any key to wake it.</div>`:""}
+    <div class="col"><span class="lbl">Live lighting</span>${seg("liveModeP",[["off","Off"],["dark","Dark"],["solid","Solid"],["wave","Wave"],["custom","Custom"],["effect","Effect"]],md)}</div>
+    <div class="col"><div class="row" style="justify-content:space-between"><span class="lbl">Brightness</span><span class="readout">${S.live.bri}%</span></div>${seg("briP",[[25,"25%"],[50,"50%"],[75,"75%"],[100,"100%"]],S.live.bri)}</div>
+    <div class="row"><button class="btn">${I("palette")}Choose colour…</button><button class="btn">${I("pause")}Pause</button></div>
+    <hr><div class="mi">Onboard effect<kbd>${ENAME[S.onboard-1]}</kbd></div><div class="mi">Connection<kbd>${{auto:"Automatic",cable:"USB cable",receiver:"2.4G"}[S.pref]} ›</kbd></div><div class="mi">Edit layout file…<kbd>⌘E</kbd></div>
+    <hr><div class="mi">${I("win").replace("<svg",'<svg style="width:15px;height:15px"')}Open F65…<kbd>⌘O</kbd></div><div class="mi">Start at login<kbd>${{on:"On",off:"Off",approval:"Needs approval"}[S.login]}</kbd></div><div class="mi">Quit F65 Lighting<kbd>⌘Q</kbd></div>
+  </div></div>`;}
+
+// ===================================================================== notes per screen
+const N={
+ hero:{t:"Hero",s:"The lighting home screen in this direction, with both shipping colourways running the same saved effect.",
+  shows:["Both real colourways: Grey White (white alphas, blue-grey mods, black Esc/Enter/Space/arrows) and Black Grey","Readouts for the saved effect: name and number, brightness, speed (unconfirmed direction), colour","Toolbar: link, wake state, battery as unconfirmed"],
+  lim:["Values shown are sample state, marked as such","Previews approximate the onboard effects"],
+  mo:[["Camera settle on open","camera","700 ms cubic in-out","Jump to preset"],["Effect preview","speed step","Continuous at the stored speed","One still frame"],["Colourway swap","layer-in","220 ms crossfade","Instant"]]},
+ lighting:{t:"Lighting",s:"Pick the saved effect and tune its own brightness, speed and colour. Side lights live underneath.",
+  shows:["18 effects in onboard order, numbered; a typing icon marks the 4 reactive ones","Per-effect levels 0–4 as tick scales; colour as 7 palette swatches plus multicolour","Side lights: effect, colour (Solid and Breathing only), brightness"],
+  lim:["Every change saves the 128-byte lighting block: "+PK.lighting+" packets over 2.4G","Quick clicks are queued into one save","Speed direction labelled unconfirmed"],
+  mo:[["Hover a tile","preview-hover","0 ms in, 150 ms out","Still frame"],["Select tile / level","ack","120 ms ease-out ring","Instant"],["Edit palette sheet","system sheet","AppKit default","AppKit default"],["Save","ack","Status bar segments fill per ack","Fill without easing"]]},
+ live:{t:"Live lighting",s:"App-streamed colours. Pinned keys sit on top of a background. Nothing is saved on the keyboard.",
+  shows:["Rest of keyboard: Off, Dark, Solid, Rainbow wave, Custom layout file, Effect (13 backgrounds)","Key colours: click caps in 3D to pin; chips list them","Link budget: exact on cable; 168-byte frames on 2.4G"],
+  lim:["Over 2.4G streaming needs the onboard effect to be Fixed; the banner offers the switch (a lighting-block save)","Reactive backgrounds aren't available","Try: switch the Keyboard control to Cable and the warning goes away"],
+  mo:[["Preview mirrors frames","live-mirror","20 fps, no easing","2 fps"],["Pin a key","ack + keypress","120 ms ring, 50/150 ms dip","Ring only"],["Mode change","layer-in/out","220 / 150 ms crossfade","Instant"]]},
+ keys:{t:"Keys",s:"Remap any of the 67 physical keys on the Base or Fn layer. Click a keycap to inspect it.",
+  shows:["Top camera so every legend is readable; selected key glows","Real LED/key slot number from the matrix","Grouped targets: letters, F-keys, named keys, modifiers, media, disable"],
+  lim:["Fn and connection bindings are protected and need a confirmation alert","A layer is 504 bytes: "+PK.layer+" packets over 2.4G","The current binding is read from the keyboard; the one shown is an example"],
+  mo:[["Base ↔ Fn","keycap-flip","340 ms spring, legends turn over","150 ms crossfade"],["Select key","ack","120 ms glow","Instant"],["Protected warning","system alert","AppKit default","AppKit default"]]},
+ restore:{t:"Restore points",s:"Every save writes a restore point first. Restore with verified writes and automatic rollback.",
+  shows:["Rows use the real file-name format f65-yyyyMMdd-HHmmss-SSS-xxxxxxxx.txt","Back up now, Import… (CLI backups), Reveal folder","The two failure outcomes with their exact app wording"],
+  lim:["Restore writes 4 blocks: "+(PK.lighting+PK.palette+2*PK.layer)+" packets over 2.4G or 4 reports over the cable","Rows shown are examples"],
+  mo:[["New restore point","row-insert","220 ms fade + 6 px rise","Fade only"],["Restore progress","ack","Per-packet segments","Fill without easing"],["Rollback failed banner","none","Appears at once; never animated","Same"]]},
+ conn:{t:"Connection states",s:"Cable, 2.4G, asleep, offline and no permission. The Keyboard control in the bar sets this for every screen.",
+  shows:["Toolbar chips change per state; battery only appears over 2.4G and is labelled unconfirmed","Asleep: pulsing wake prompt, keyboard dimmed, writes blocked","Offline / no permission: keyboard ghosted, one clear action"],
+  lim:["The app polls 07 every 5 s online and 2 s offline","No full-window greying in any state; only write buttons disable"],
+  mo:[["Wake prompt","wake-pulse","2.4 s loop, ease-in-out","Static outline at 50%"],["State chip change","layer-in/out","220 / 150 ms","Instant"],["Keyboard dims","layer-in","220 ms to 42%","Instant"]]},
+ settings:{t:"Settings",s:"Preview-only display options, start at login, and the unconfirmed items in one place.",
+  shows:["Display 3D/Flat (flat styles: Flat lay, Glass, Outline), camera presets, colourway","Start at login with its real three states: On, Off, Needs approval","Reduce Motion follows macOS"],
+  lim:["None of these write to the keyboard","There is no separate settings export; restore points are the export"],
+  mo:[["3D ↔ Flat","keycap-flip","340 ms spring","150 ms crossfade"],["Camera preset","camera","700 ms cubic in-out","Jump"],["Colourway","layer-in","220 ms","Instant"]]},
+ saving:{t:"Save in progress",s:"A lighting save over 2.4G: backup, then "+PK.lighting+" acknowledged packets, then a read-back verify. The window never greys out.",
+  shows:["Status bar LED strip: one segment per packet; orange marks a resend","Step chips: Restore point → Write → Verify","The chosen tile updates at once with a small spinner; the next click is queued, not blocked"],
+  lim:["Up to 5 attempts per packet before a timeout","Cable saves are one report per block, so the bar is a single segment","Loops here for demonstration"],
+  mo:[["Packet ack","ack","120 ms ease-out per segment","Instant fill"],["Resend","resend","Orange, then accent on ack","Colour only"],["Queued change chip","layer-in","220 ms fade","Instant"]]},
+ menu:{t:"Menu-bar popover",s:"The status item opens a popover with the live controls that already exist in the menu.",
+  shows:["Link and wake state","Live lighting mode and brightness 25/50/75/100%","Colour, pause, onboard effect (read only), connection, layout file, open window, start at login, quit"],
+  lim:["Same actions as the current NSMenu; no new features","Click the status item to replay open/close"],
+  mo:[["Open","popover","200 ms scale .96→1 + fade","Fade only"],["Close","popover","130 ms","Fade only"]]}
+};
+function notesHTML(){const n=N[S.screen],d=DIRS[S.dir];
+  return `<div><span class="eyebrow">${d.name}${d.rec?" · recommended":""}</span><h3>${n.t}</h3><p class="sub">${n.s}</p></div>
+  <div class="nblock"><h4>On screen</h4><ul>${n.shows.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+  <div class="nblock"><h4>Backend limits</h4><ul>${n.lim.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+  <div class="nblock"><h4>Motion</h4><div style="overflow-x:auto"><table class="mtable"><thead><tr><th>Element</th><th>Token</th><th>Spec</th><th>Reduce Motion</th></tr></thead><tbody>${n.mo.map(r=>`<tr><td>${r[0]}</td><td class="t">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join("")}</tbody></table></div></div>`;}
+
+// ===================================================================== render
+const win=document.getElementById("win");
+function statusHTML(){return `<div class="pk idle" id="pk"></div><span class="smsg" id="smsg">${{cable:"Loaded from keyboard",rf:"Loaded from keyboard",asleep:"Press any key on the F65 to wake it. Nothing was saved.",offline:"AULA F65 not connected.",noperm:"Needs Input Monitoring permission."}[S.conn]}</span><span class="steps" id="steps"></span>`;}
+function render(){
+  VIEWS.forEach(v=>v.destroy());VIEWS=[];stopSave();
+  win.dataset.dir=S.dir;win.classList.toggle("rm",S.rm);
+  if(S.screen==="menu"){win.style.gridTemplateRows="1fr";win.innerHTML=menu();}
+  else{win.style.gridTemplateRows="";
+    const body={hero,lighting:()=>lighting(false),saving:()=>lighting(true),live,keys,restore,conn:connScreen,settings}[S.screen]();
+    win.innerHTML=`<div class="tbar"><span class="lights"><i></i><i></i><i></i></span><span class="wname">F65</span><div class="tstat">${chipsHTML()}</div></div>
+      <div class="wbody"><nav class="side" aria-label="Sections">${sideHTML(S.screen)}</nav><main class="wc">${body}</main></div><footer class="sbar">${statusHTML()}</footer>`;}
+  document.getElementById("notes").innerHTML=notesHTML();
+  mount();
+  if(S.screen==="saving")startSave(true);
+  syncBar();
+}
+function mount(){if(!HAS3D){win.querySelectorAll("[data-kb]").forEach(el=>{el.classList.add("fail");el.textContent="3D model unavailable (three.js didn't load).";});return;}
+  win.querySelectorAll("[data-kb]").forEach(el=>{const r=el.dataset.role,cw=el.dataset.cw==="global"?S.cw:el.dataset.cw;
+    const o={cw,view:el.dataset.view||(r==="keys"?"top":"three"),orbit:!!el.dataset.orbit,fitMul:+(el.dataset.fit||1),fov:r==="keys"?24:28};
+    if(r==="onboard"){o.effect=S.onboard;o.slot=S.slots[S.onboard];}
+    if(r==="live"){o.override=liveOverride;o.onPick=id=>{const p=S.live.pinned,i=p.indexOf(id);if(i>=0)p.splice(i,1);else p.push(id);press(id);softRender();};}
+    if(r==="keys"){o.override=keysOverride;o.onPick=id=>{S.sel=id;press(id);softRender();};}
+    const v=make3D(el,o);if(v){v.role=r;if(wellState())v.glow=0;}});
+}
+// Re-render only the HTML around 3D views (keeps WebGL contexts alive)
+function softRender(){const wc=win.querySelector("main.wc");if(!wc){render();return;}
+  const keep=[...win.querySelectorAll("[data-kb]")];const st=wc.scrollTop;
+  const body={hero,lighting:()=>lighting(S.screen==="saving"),saving:()=>lighting(true),live,keys,restore,conn:connScreen,settings}[S.screen]();
+  const tmp=document.createElement("div");tmp.innerHTML=body;const nk=[...tmp.querySelectorAll("[data-kb]")];
+  if(nk.length!==keep.length){render();return;}
+  nk.forEach((el,i)=>{el.replaceWith(keep[i]);});wc.innerHTML="";while(tmp.firstChild)wc.appendChild(tmp.firstChild);wc.scrollTop=st;
+  VIEWS.forEach(v=>{v.dirty=true;if(v.role==="onboard"){v.effect=S.onboard;v.slot=S.slots[S.onboard];}});
+}
+
+// ===================================================================== simulated save (status bar)
+let saveTimer=null,saveLoop=false;
+function stopSave(){clearTimeout(saveTimer);saveTimer=null;saveLoop=false;}
+function startSave(loop,label){
+  if(!canWrite()){const m=document.getElementById("smsg");if(m)m.textContent=S.conn==="asleep"?"Press any key on the F65 to wake it. Nothing was saved.":"Can't save: "+CONN[S.conn].t.toLowerCase()+".";return;}
+  stopSave();saveLoop=loop;const total=S.conn==="cable"?1:PK.lighting;const resendAt=loop?3:-1;let done=0,phase=0,resent=false;
+  const pk=document.getElementById("pk"),msg=document.getElementById("smsg"),steps=document.getElementById("steps");if(!pk)return;
+  pk.classList.remove("idle");pk.innerHTML=Array.from({length:total},()=>"<i></i>").join("");
+  const segs=[...pk.children];const lab=label||("Lighting · "+ENAME[S.onboard-1]);
+  const stepHTML=(a,b,c)=>`<span class="step ${a}">Restore point</span><span class="step ${b}">Write</span><span class="step ${c}">Verify</span>`;
+  if(S.rm){segs.forEach((s,i)=>s.classList.toggle("on",i<Math.ceil(total*.7)));msg.innerHTML=`<b>Saving ${lab}</b> · ${Math.ceil(total*.7)} of ${total} ${total>1?"packets":"report"} acknowledged`;steps.innerHTML=stepHTML("done","now","")+(loop?'<span class="queued">Next change queued</span>':"");if(!loop)saveTimer=setTimeout(finish,900);return;}
+  msg.innerHTML=`<b>Saving ${lab}</b> · writing restore point`;steps.innerHTML=stepHTML("now","","");
+  const tick=()=>{
+    if(phase===0){phase=1;steps.innerHTML=stepHTML("done","now","")+(loop?'<span class="queued">Next change queued</span>':"");saveTimer=setTimeout(tick,260);return;}
+    if(phase===1){
+      if(done===resendAt&&!resent){segs[done].classList.add("rs");resent=true;msg.innerHTML=`<b>Saving ${lab}</b> · packet ${done+1} resent (attempt 2 of 5)`;saveTimer=setTimeout(tick,320);return;}
+      segs[done].classList.remove("rs");segs[done].classList.add("on");done++;
+      msg.innerHTML=`<b>Saving ${lab}</b> · ${done} of ${total} ${total>1?"packets":"report"} acknowledged`;
+      if(done>=total){phase=2;steps.innerHTML=stepHTML("done","done","now");msg.innerHTML=`<b>Verifying</b> · reading the block back`;saveTimer=setTimeout(tick,520);return;}
+      saveTimer=setTimeout(tick,110);return;}
+    if(phase===2){steps.innerHTML=stepHTML("done","done","done");msg.innerHTML=`<b>Saved and verified</b> · ${lab}`;
+      if(loop)saveTimer=setTimeout(()=>startSave(true),1700);else saveTimer=setTimeout(finish,1400);}
+  };saveTimer=setTimeout(tick,220);
+  function finish(){pk.classList.add("idle");steps.innerHTML="";msg.textContent="Saved and verified";}
+}
+
+// ===================================================================== interactions inside the window
+win.addEventListener("click",e=>{
+  const nav=e.target.closest("[data-nav]");if(nav){const k=nav.dataset.nav;if(k==="macros"){const m=document.getElementById("smsg");if(m)m.textContent="Macros: memory is shown read-only. Writes are blocked until the format is confirmed.";return;}S.screen=k;render();return;}
+  if(e.target.closest(".si")){const p=document.getElementById("pop");if(p){if(p.classList.contains("closing")){p.classList.remove("closing");p.style.animation="none";void p.offsetWidth;p.style.animation="";}else{p.classList.add("closing");}}return;}
+  const act=e.target.closest("[data-act]");
+  if(act){const a=act.dataset.act;
+    if(a==="fixed"){S.onboard=1;softRender();startSave(false,"Lighting · Fixed");}
+    if(a==="clearKeys"){S.live.pinned=[];softRender();}
+    if(a==="multi"){S.live.multi=!S.live.multi;softRender();}
+    if(a==="login"){S.login=S.login==="on"?"off":S.login==="off"?"approval":"on";softRender();}
+    return;}
+  const b=e.target.closest("button[data-v]");if(!b||b.disabled)return;const g=b.closest("[data-g]");if(!g)return;const val=b.dataset.v,gn=g.dataset.g,num=+val;
+  if(gn==="effect"){if(!canWrite())return;S.onboard=num;softRender();startSave(S.screen==="saving");}
+  else if(gn==="bri"||gn==="spd"||gn==="col"){if(!canWrite())return;S.slots[S.onboard][gn]=num;softRender();startSave(S.screen==="saving");}
+  else if(gn==="sideC"){S.side.c=num;softRender();startSave(false,"Side lights");}
+  else if(gn==="sideB"){S.side.b=num;softRender();startSave(false,"Side lights");}
+  else if(gn==="layer"){S.layer=val;softRender();}
+  else if(gn==="liveSpd"){S.live.spd=num;softRender();}
+  else if(gn==="liveModeP"){S.live.mode=val;softRender();}
+  else if(gn==="briP"){S.live.bri=num;softRender();}
+  else if(gn==="conn"){S.conn=val;render();}
+  else if(gn==="pref"){S.pref=val;softRender();}
+  else if(gn==="display"){S.display=val;softRender();}
+  else if(gn==="camera"){S.camera=val;VIEWS.forEach(v=>v.setView(val));softRender();}
+  else if(gn==="cw"){S.cw=val;VIEWS.forEach(v=>{if(v.el.dataset.cw==="global")v.setCW(val);});softRender();}
+});
+win.addEventListener("change",e=>{const g=e.target.dataset.g;
+  if(g==="sideE"){S.side.e=+e.target.value;softRender();startSave(false,"Side lights");}
+  if(g==="liveMode"){S.live.mode=e.target.value;softRender();}
+  if(g==="liveBg"){S.live.bg=+e.target.value;softRender();}});
+win.addEventListener("input",e=>{if(e.target.id==="liveBri"){S.live.bri=+e.target.value;const r=e.target.closest(".col").querySelector(".readout");if(r)r.textContent=S.live.bri+"%";}});
+// hover preview on effect tiles (no save)
+win.addEventListener("pointerover",e=>{const b=e.target.closest(".fxb");if(!b||b.disabled)return;const n=+b.dataset.v;
+  VIEWS.forEach(v=>{if(v.role==="onboard"){v.effect=n;v.slot=S.slots[n];v.dirty=true;}});const l=document.getElementById("pvLbl"),h=document.getElementById("pvHint");if(l)l.textContent=ENAME[n-1];if(h)h.textContent=n===S.onboard?"":"Preview · not saved";});
+win.addEventListener("pointerout",e=>{const b=e.target.closest(".fxb");if(!b||(e.relatedTarget&&b.contains(e.relatedTarget)))return;
+  VIEWS.forEach(v=>{if(v.role==="onboard"){v.effect=S.onboard;v.slot=S.slots[S.onboard];v.dirty=true;}});const l=document.getElementById("pvLbl"),h=document.getElementById("pvHint");if(l)l.textContent=ENAME[S.onboard-1];if(h)h.textContent="";});
+
+// ===================================================================== board controls
+function pills(el,items,cur,fn){el.innerHTML=items.map(([v,t,star])=>`<button data-v="${v}" aria-pressed="${v===cur}">${t}${star?'<span class="star" aria-label="recommended">★</span>':""}</button>`).join("");
+  el.onclick=e=>{const b=e.target.closest("button");if(b)fn(b.dataset.v);};}
+function syncBar(){
+  pills(document.getElementById("pDir"),Object.entries(DIRS).map(([k,d])=>[k,d.name,d.rec]),S.dir,v=>{S.dir=v;win.dataset.dir=v;document.getElementById("notes").innerHTML=notesHTML();syncBar();});
+  pills(document.getElementById("pScr"),SCREENS,S.screen,v=>{S.screen=v;render();});
+  pills(document.getElementById("pConn"),Object.entries(CONN).map(([k,c])=>[k,c.t]),S.conn,v=>{S.conn=v;render();});
+  document.querySelectorAll(".dcard").forEach(c=>c.classList.toggle("cur",c.dataset.dir===S.dir));
+}
+const rmT=document.getElementById("rmT");rmT.checked=S.rm;rmT.onchange=()=>{S.rm=rmT.checked;frozen=performance.now()/1000;render();};
+
+// direction cards, inventory, motion tables
+document.getElementById("dircards").innerHTML=Object.entries(DIRS).map(([k,d])=>`<article class="dcard ${d.rec?"rec":""}" data-dir="${k}">
+  <span class="verdict" style="color:${d.rec?"var(--tag-ok)":"var(--ink2)"}">${d.verdict}</span><h3>${d.name}</h3><div class="sw">${d.sw.map(c=>`<i style="background:${c}"></i>`).join("")}</div>
+  <p class="small">${d.type}</p><ul>${d.pros.map(p=>`<li>${p}</li>`).join("")}</ul><ul class="small">${d.cons.map(p=>`<li>${p}</li>`).join("")}</ul>
+  <button data-dir="${k}">Show ${d.name}</button></article>`).join("");
+document.getElementById("dircards").addEventListener("click",e=>{const b=e.target.closest("button[data-dir]");if(!b)return;S.dir=b.dataset.dir;S.screen="hero";render();document.getElementById("stage").scrollIntoView({behavior:S.rm?"auto":"smooth",block:"center"});});
+const TAG={ok:["ok","Supported"],un:["un","Unconfirmed"],ro:["ro","Read only"],out:["out","Out of scope"]};
+document.querySelector("#invT tbody").innerHTML=INV.map(([a,b,c,s])=>`<tr><td>${a}</td><td>${b}</td><td class="src">${c}</td><td><span class="tag ${TAG[s][0]}">${TAG[s][1]}</span></td></tr>`).join("");
+document.querySelector("#motT tbody").innerHTML=MOT.map(([a,b,c,d])=>`<tr><td class="mono">${a}</td><td>${b}</td><td>${c}</td><td>${d}</td></tr>`).join("");
+
+// stage scaling
+const stage=document.getElementById("stage"),scaler=document.getElementById("scaler");
+function fit(){const s=Math.min(1,stage.clientWidth/1160);scaler.style.transform=`scale(${s})`;stage.style.height=Math.round(740*s)+"px";}
+new ResizeObserver(fit).observe(stage);fit();
+render();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(HAS3D){redrawLegends();VIEWS.forEach(v=>v.dirty=true);}});
+})();
+</script>
