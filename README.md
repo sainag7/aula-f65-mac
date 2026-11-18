@@ -1,3 +1,5 @@
+<img src="app/Resources/icon/AppIcon-1024.png" width="128" alt="F65 Lighting app icon: a 65% keyboard lit with a colour wave">
+
 # F65 Lighting for macOS
 
 A native Mac app for the **AULA F65** keyboard. Change its lighting, paint your own key colours, remap keys and go back to any earlier setup, all without the Windows driver.

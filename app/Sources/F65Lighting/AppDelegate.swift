@@ -140,12 +140,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: Menu
 
+    /// The Wave logo's menu-bar glyph (mockups/f65-logos.html, B): a 65% board outline with two rows of keys.
+    /// A template image, so macOS tints it for light and dark menu bars and greys it when disabled.
+    static func menuBarGlyph() -> NSImage {
+        let img = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
+            NSColor.black.set()
+            let outline = NSBezierPath(roundedRect: NSRect(x: 1.5, y: 4.5, width: 15, height: 9), xRadius: 2, yRadius: 2)
+            outline.lineWidth = 1.4
+            outline.stroke()
+            let keys = NSBezierPath()
+            keys.lineWidth = 1.5
+            keys.lineCapStyle = .round
+            for (y, runs) in [(7.5, [(4.0, 5.0), (6.5, 7.5), (9.0, 10.0), (11.5, 12.5)]), (10.5, [(4.0, 5.0), (6.5, 11.5), (13.0, 14.0)])] {
+                for (a, b) in runs { keys.move(to: NSPoint(x: a, y: y)); keys.line(to: NSPoint(x: b, y: y)) }
+            }
+            keys.stroke()
+            return true
+        }
+        img.isTemplate = true
+        img.accessibilityDescription = "F65 Lighting"
+        return img
+    }
+
     private func buildMenu() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let b = statusItem.button {
-            let img = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "F65 Lighting")
-            img?.isTemplate = true
-            b.image = img
+            b.image = Self.menuBarGlyph()
             b.toolTip = "F65 Lighting"
         }
         menu.delegate = self

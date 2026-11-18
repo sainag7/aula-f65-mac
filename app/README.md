@@ -125,6 +125,7 @@ at a time; a second copy quits immediately.
 | `Sources/F65Lighting/SmokeTest.swift`, `Screenshots.swift` | Mock-only scripted check (`F65_SMOKE=1`) and README screenshots (`F65_SHOTS`) |
 | `Tests/F65KitTests/` | Unit tests |
 | `Package.swift`, `Info.plist`, `build.sh` | Package, bundle metadata, build script |
+| `Resources/icon/` | App icon: `make-svg.mjs` draws the SVGs, `build-icns.sh` renders them (headless Chrome) into the committed `AppIcon.icns`. The menu-bar glyph is drawn in code (`AppDelegate.menuBarGlyph`) |
 
 ## 2.4G receiver notes (tested on the F65)
 - Reports of a frame go out 2 ms apart: back to back, the receiver drops some and keys stall, then jump.
